@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
+**Next task:** P1-10 — Build Admin: User list page (sortable, filterable, paginated)
 
 ---
 
@@ -83,6 +83,7 @@
 - [x] Forgot/reset password: ForgotPasswordController, ResetPasswordController, both Requests; ForgotPassword.tsx, ResetPassword.tsx; uses Laravel Password facade + PasswordReset event
 - [x] 2FA setup: TwoFactorService (BaconQrCode SVG QR), TwoFactorSetupController, EnableTwoFactorRequest; TwoFactorSetup.tsx (QR code display, 6-digit confirm, disable with password)
 - [x] 2FA challenge: TwoFactorChallengeController (session-based pending user, verify → Auth::login), TwoFactorChallenge.tsx (mono code input, logout link); AuthController::login wired to intercept
+- [x] Profile page: ProfileController (avatar upload to public disk), PasswordUpdateController; Profile/Edit.tsx (avatar+initials fallback, all fields, password section, security 2FA card)
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 

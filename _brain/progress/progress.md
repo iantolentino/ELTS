@@ -141,7 +141,14 @@
   - TwoFactorChallenge.tsx: lock icon, large mono code input (centered, tracking, auto-strips non-digits), submit disabled until 6 chars, "use a different account" logout link
   - Full flow: login → 2FA intercept → challenge page → verify → dashboard
   - Build: 0 errors, 946 modules
-- [ ] P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
+- [x] P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
+  - ProfileRequest: name/phone/job_title/timezone/locale/avatar validation (image max 2MB, mimes jpeg/png/webp)
+  - PasswordUpdateRequest: current_password rule + new password confirmed min 8
+  - ProfileController: edit() passes profileUser props (avatar_url via Storage::disk public), update() handles avatar upload/delete + field update
+  - PasswordUpdateController: update password, back with success
+  - Routes (auth+verified): GET/PATCH /profile, PATCH /profile/password
+  - Profile/Edit.tsx: avatar click-to-upload with initials fallback, name/email(readonly)/phone/job_title/timezone select/locale select, password change with show/hide toggles, security card with 2FA badge + Manage link
+  - Build: 0 errors, 947 modules
 - [ ] P1-10 — Build Admin: User list page (sortable, filterable, paginated)
 - [ ] P1-11 — Build Admin: Create / edit user form (role, team, department assignment)
 - [ ] P1-12 — Build Admin: Agent availability status toggle (Online/Busy/Away/Offline)
@@ -400,5 +407,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-08 — Build 2FA challenge page
-- Next task: P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
+- Last completed task: P1-09 — Build user profile page
+- Next task: P1-10 — Build Admin: User list page (sortable, filterable, paginated)
