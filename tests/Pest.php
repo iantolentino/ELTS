@@ -3,35 +3,42 @@
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-| Feature tests use the full Laravel TestCase with RefreshDatabase so every
-| test starts with a clean slate. Unit tests use the lightweight PHPUnit
-| TestCase and do not touch the database.
-*/
-
 uses(TestCase::class, RefreshDatabase::class)->in('Feature');
 
 /*
 |--------------------------------------------------------------------------
-| Expectations
+| Global setup
 |--------------------------------------------------------------------------
-| Extend Pest's expect() with project-specific helpers here.
-| Example: expect()->extend('toBeValidTicket', fn () => ...);
 */
+
+beforeEach(function () {
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+});
 
 /*
 |--------------------------------------------------------------------------
-| Functions
+| Helpers
 |--------------------------------------------------------------------------
-| Global helpers available in every test file.
 */
 
-function actingAsRole(string $role): \Illuminate\Contracts\Auth\Authenticatable
+/**
+ * Create a user with the given role. Creates the role via firstOrCreate so
+ * tests do not need to run the full seeder just to get a single role.
+ */
+function actingAsRole(string $role, array $attributes = []): \App\Models\User
 {
-    $user = \App\Models\User::factory()->create();
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+    $user = \App\Models\User::factory()->create($attributes);
     $user->assignRole($role);
     return $user;
+}
+
+/**
+ * Seed all roles and permissions (runs RolesAndPermissionsSeeder).
+ * Use this when a test needs the full permission matrix.
+ */
+function seedRoles(): void
+{
+    (new \Database\Seeders\RolesAndPermissionsSeeder())->run();
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 }

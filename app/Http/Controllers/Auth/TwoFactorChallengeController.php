@@ -43,7 +43,7 @@ class TwoFactorChallengeController extends Controller
         /** @var User $user */
         $user = User::findOrFail($userId);
 
-        if (!$this->twoFactorService->verifyCode($user, $request->string('code'))) {
+        if (!$this->twoFactorService->verifyCode($user, (string) $request->input('code'))) {
             throw ValidationException::withMessages([
                 'code' => 'The code is invalid. Please check your authenticator app and try again.',
             ]);

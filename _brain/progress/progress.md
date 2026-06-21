@@ -233,7 +233,14 @@
   - Pages/Admin/Sessions/Index.tsx: debounced search, per-page selector, 3-column grid per row (user/IP+browser/time); "Force logout" button; current admin session shows "Your session" badge (protected)
   - Profile/Edit.tsx: "Active sessions → Manage" link added above login history in Security card
   - Sidebar: DevicePhoneMobileIcon + "Active Sessions" nav item (/admin/sessions) in Developer group (super_admin+admin)
-- [ ] P1-18 — Unit tests: UserService, registration, login, 2FA
+- [x] P1-18 — Unit tests: UserService, registration, login, 2FA
+  - tests/Pest.php updated: global beforeEach clears Spatie permission cache; actingAsRole() creates role via firstOrCreate (no seeder required); seedRoles() helper runs full RolesAndPermissionsSeeder
+  - tests/Feature/Auth/RegistrationTest.php (6 tests): happy path creates client role user + fires Registered event; rejects duplicate email, weak password, mismatched confirmation; redirect on registration disabled
+  - tests/Feature/Auth/LoginTest.php (7 tests): successful login + redirect; records success/failed login_histories; updates last_login_at + last_login_ip; rejects wrong password + inactive account; redirects to 2FA challenge
+  - tests/Feature/Auth/TwoFactorTest.php (7 tests): setup generates secret; enable with valid TOTP; rejects invalid code on setup + challenge; disable with correct password; rejects disable with wrong password; full 2FA challenge flow
+  - tests/Feature/Admin/UserServiceTest.php (10 tests): paginate all; filter by name/email search; filter by role; filter by active/inactive; createUser assigns role + hashes password; updateUser skips empty password; hashes new password; syncRoles; updateAvailability
+  - Bug fixed: TwoFactorSetupController + TwoFactorChallengeController passed Stringable to verifyCode() (which expects string) — fixed to use (string) $request->input('code')
+  - 32/32 tests pass
 
 ---
 
@@ -483,5 +490,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-17 — Build active sessions page with force-logout capability
-- Next task: P1-18 — Unit tests: UserService, registration, login, 2FA
+- Last completed task: P1-18 — Unit tests: UserService, registration, login, 2FA
+- Next task: P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments

@@ -3,11 +3,11 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 0 COMPLETE, PHASE 1 IN PROGRESS
+## STATE: EXECUTION_MODE — PHASE 1 COMPLETE, PHASE 2 IN PROGRESS
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-18 — Unit tests: UserService, registration, login, 2FA
+**Next task:** P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments
 
 ---
 

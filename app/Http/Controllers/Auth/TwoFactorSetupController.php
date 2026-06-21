@@ -43,7 +43,7 @@ class TwoFactorSetupController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if (!$this->twoFactorService->verifyCode($user, $request->string('code'))) {
+        if (!$this->twoFactorService->verifyCode($user, (string) $request->input('code'))) {
             throw ValidationException::withMessages([
                 'code' => 'The code is invalid. Please check your authenticator app and try again.',
             ]);
