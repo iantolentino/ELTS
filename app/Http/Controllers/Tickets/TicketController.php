@@ -169,6 +169,7 @@ class TicketController extends Controller
                 'change_priority' => $user->can('changePriority', Ticket::class),
                 'update'          => $user->can('update', $ticket),
                 'watch'           => $user->can('watch', $ticket),
+                'merge'           => $user->can('merge', Ticket::class),
                 'delete'          => $user->can('delete', $ticket),
             ],
             'statuses' => TicketStatus::orderBy('sort_order')->get(['id', 'name', 'color']),

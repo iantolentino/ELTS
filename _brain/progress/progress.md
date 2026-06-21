@@ -323,7 +323,13 @@
   - Route: POST /tickets/bulk (placed before /{ticket} wildcard)
   - Index.tsx: checkbox column with stopPropagation, select-all header checkbox (indeterminate state via ref), selectedIds state, blue bulk action bar (appears when any selected) with action select + conditional status/assignee inputs + Apply/Clear; row highlighted when selected; selected count shown in header
   - Build: 0 errors
-- [ ] P2-16 — Build ticket merge UI (select target ticket, confirm, preserve thread)
+- [x] P2-16 — Build ticket merge UI (select target ticket, confirm, preserve thread)
+  - TicketSearchController (invokable): GET /tickets/search → JSON; filters merged/deleted, excludes source, min 2 chars, limit 10
+  - MergeTicketRequest: authorize merge policy; validates target_ticket_id exists + not deleted + not already merged + not self
+  - TicketMergeController: POST /tickets/{ticket}/merge → mergeTickets() → redirect to target with success flash
+  - Routes: GET /tickets/search + POST /tickets/{ticket}/merge (both before /{ticket} wildcard)
+  - TicketController::show(): passes can.merge (class-level policy)
+  - Show.tsx: MergeModal component — debounced axios search with loading state, results dropdown, selected target card (green), warning banner explaining what happens, ESC/backdrop to close; ArrowsRightLeftIcon button in header (only when can.merge)
 - [ ] P2-17 — Build parent-child ticket linking UI
 - [ ] P2-18 — Build Admin: Custom status management (create, edit, reorder, set color)
 - [ ] P2-19 — Build Admin: Category & subcategory management (tree editor)
@@ -551,5 +557,5 @@
 
 ## CURRENT STATUS
 - Phase: 2 — IN PROGRESS
-- Last completed task: P2-15 — Bulk actions (assign / change status / close / delete)
-- Next task: P2-16 — Ticket merge UI (select target ticket, confirm, preserve thread)
+- Last completed task: P2-16 — Ticket merge UI
+- Next task: P2-17 — Parent-child ticket linking UI

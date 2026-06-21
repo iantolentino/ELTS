@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Badge, Button } from '@/Components/UI';
 import TiptapEditor from '@/Components/editor/TiptapEditor';
 import { ArrowLeftIcon, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon, BellIcon, BellSlashIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon, BellIcon, BellSlashIcon, ArrowsRightLeftIcon, MagnifyingGlassIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import type { TicketStatus, TicketTag } from '@/types';
 
 interface UserMin { id: number | null; name: string; avatar_url: string | null; email?: string; }
@@ -27,7 +27,7 @@ interface TicketData {
     activity: ActivityEntry[]; custom_field_values: CFValue[];
 }
 
-interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; update: boolean; watch: boolean; delete: boolean; }
+interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; update: boolean; watch: boolean; merge: boolean; delete: boolean; }
 
 interface Props {
     ticket:   TicketData;
@@ -40,6 +40,122 @@ interface Props {
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 const SELECT_CLS = 'w-full border border-[--color-border] rounded-lg px-3 py-2 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none';
+
+interface SearchResult { id: number; ticket_number: string; subject: string; status: { name: string; color: string }; }
+
+function MergeModal({ ticket, onClose }: { ticket: TicketData; onClose: () => void }) {
+    const [query, setQuery]       = useState('');
+    const [results, setResults]   = useState<SearchResult[]>([]);
+    const [target, setTarget]     = useState<SearchResult | null>(null);
+    const [searching, setSearching] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [onClose]);
+
+    const search = (value: string) => {
+        setQuery(value);
+        setTarget(null);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (value.length < 2) { setResults([]); return; }
+        debounceRef.current = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const res = await window.axios.get('/tickets/search', { params: { q: value, exclude: ticket.id } });
+                setResults(res.data);
+            } finally {
+                setSearching(false);
+            }
+        }, 350);
+    };
+
+    const submit = () => {
+        if (!target) return;
+        setSubmitting(true);
+        router.post(`/tickets/${ticket.id}/merge`, { target_ticket_id: target.id }, {
+            onFinish: () => setSubmitting(false),
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[--color-border]">
+                    <div className="flex items-center gap-2">
+                        <ArrowsRightLeftIcon className="w-5 h-5 text-primary-600" />
+                        <h2 className="text-base font-semibold text-[--color-text]">Merge Ticket</h2>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-[--color-text-muted] hover:bg-[--color-bg] transition-colors"><XMarkIcon className="w-4 h-4" /></button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                        <strong>{ticket.ticket_number}</strong> will be closed and all its replies, notes, and attachments will move to the target ticket.
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[--color-text] mb-1.5">Search for target ticket</label>
+                        <div className="relative">
+                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--color-text-muted]" />
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={e => search(e.target.value)}
+                                placeholder="Ticket # or subject…"
+                                autoFocus
+                                className="w-full border border-[--color-border] rounded-lg pl-9 pr-4 py-2 text-sm text-[--color-text] focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                            />
+                        </div>
+
+                        {(results.length > 0 || searching) && !target && (
+                            <div className="mt-1 border border-[--color-border] rounded-lg overflow-hidden shadow-sm">
+                                {searching ? (
+                                    <div className="px-4 py-3 text-sm text-[--color-text-muted]">Searching…</div>
+                                ) : results.map(r => (
+                                    <button key={r.id} onClick={() => { setTarget(r); setResults([]); }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[--color-bg] transition-colors border-b border-[--color-border] last:border-0">
+                                        <span className="font-mono text-xs font-semibold text-primary-600 flex-shrink-0">{r.ticket_number}</span>
+                                        <span className="text-sm text-[--color-text] truncate flex-1">{r.subject}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white flex-shrink-0" style={{ backgroundColor: r.status.color }}>{r.status.name}</span>
+                                    </button>
+                                ))}
+                                {!searching && results.length === 0 && query.length >= 2 && (
+                                    <div className="px-4 py-3 text-sm text-[--color-text-muted]">No tickets found.</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {target && (
+                        <div className="flex items-center gap-3 bg-success-50 border border-success-200 rounded-lg px-4 py-3">
+                            <CheckCircleIcon className="w-5 h-5 text-success-600 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[--color-text]">
+                                    <span className="font-mono text-primary-600">{target.ticket_number}</span> — {target.subject}
+                                </p>
+                                <p className="text-xs text-[--color-text-muted] mt-0.5">This will be the target ticket</p>
+                            </div>
+                            <button onClick={() => { setTarget(null); setQuery(''); }} className="text-[--color-text-muted] hover:text-[--color-text]"><XMarkIcon className="w-4 h-4" /></button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[--color-border]">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[--color-text] hover:bg-[--color-bg] rounded-lg transition-colors">Cancel</button>
+                    <button onClick={submit} disabled={!target || submitting}
+                        className="px-4 py-2 text-sm font-semibold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        {submitting ? 'Merging…' : 'Merge Ticket'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function TagPicker({ ticket, allTags, canUpdate }: { ticket: TicketData; allTags: TicketTag[]; canUpdate: boolean }) {
     const [open, setOpen] = useState(false);
@@ -100,6 +216,7 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
     const [activeTab, setActiveTab] = useState<'reply' | 'note'>(can.reply ? 'reply' : 'note');
     const [body, setBody] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [mergeOpen, setMergeOpen] = useState(false);
 
     const thread = useMemo(() => [
         ...ticket.replies.map(r => ({ ...r, type: 'reply' as const })),
@@ -124,6 +241,7 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
     return (
         <AppLayout>
             <Head title={`${ticket.ticket_number} · ${ticket.subject}`} />
+            {mergeOpen && <MergeModal ticket={ticket} onClose={() => setMergeOpen(false)} />}
             <div className="p-6 max-w-7xl mx-auto space-y-4">
 
                 {/* Header */}
@@ -145,6 +263,13 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                             <Badge priority={ticket.priority} dot>{ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}</Badge>
                         </div>
                     </div>
+                    {can.merge && (
+                        <button onClick={() => setMergeOpen(true)}
+                            title="Merge ticket"
+                            className="p-2 rounded-lg text-[--color-text-muted] hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                            <ArrowsRightLeftIcon className="w-4 h-4" />
+                        </button>
+                    )}
                     {can.delete && (
                         <button onClick={() => { if (confirm('Delete this ticket?')) router.delete(`/tickets/${ticket.id}`); }}
                             className="p-2 rounded-lg text-[--color-text-muted] hover:bg-danger-50 hover:text-danger-600 transition-colors">

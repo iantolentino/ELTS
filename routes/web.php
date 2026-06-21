@@ -4,6 +4,8 @@ use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
 use App\Http\Controllers\Tickets\BulkTicketController;
+use App\Http\Controllers\Tickets\TicketMergeController;
+use App\Http\Controllers\Tickets\TicketSearchController;
 use App\Http\Controllers\Tickets\TicketTagController;
 use App\Http\Controllers\Tickets\TicketWatcherController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
@@ -85,6 +87,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create',                                  [TicketController::class, 'create'])->name('create');
         Route::post('/',                                       [TicketController::class, 'store'])->name('store');
         Route::post('/bulk',                                   [BulkTicketController::class, 'store'])->name('bulk');
+        Route::get('/search',                                  TicketSearchController::class)->name('search');
         Route::get('/{ticket}',                                [TicketController::class, 'show'])->name('show');
         Route::delete('/{ticket}',                             [TicketController::class, 'destroy'])->name('destroy');
         Route::patch('/{ticket}/status',                       [TicketController::class, 'changeStatus'])->name('status');
@@ -96,6 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{ticket}/tags/{tag}',                  [TicketTagController::class, 'destroy'])->name('tags.destroy');
         Route::post('/{ticket}/watch',                         [TicketWatcherController::class, 'store'])->name('watch');
         Route::delete('/{ticket}/watch',                       [TicketWatcherController::class, 'destroy'])->name('unwatch');
+        Route::post('/{ticket}/merge',                         [TicketMergeController::class, 'store'])->name('merge');
     });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
