@@ -13,7 +13,9 @@ use App\Models\TicketStatus;
 use App\Models\TicketWatcher;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class TicketService
 {
@@ -45,7 +47,7 @@ class TicketService
             'assignee_id'   => $data['assignee_id'] ?? null,
             'team_id'       => $data['team_id'] ?? null,
             'source'        => $data['source'] ?? 'web',
-            'is_vip'        => $data['is_vip'] ?? $requester->is_vip,
+            'is_vip'        => $data['is_vip'] ?? false,
             'due_at'        => $data['due_at'] ?? null,
         ]);
 
@@ -173,6 +175,31 @@ class TicketService
     public function removeTag(Ticket $ticket, int $tagId): void
     {
         $ticket->tags()->detach($tagId);
+    }
+
+    public function linkParent(Ticket $ticket, ?int $parentId): Ticket
+    {
+        return $this->ticketRepository->update($ticket, ['parent_ticket_id' => $parentId]);
+    }
+
+    public function addAttachment(Ticket $ticket, UploadedFile $file, int $userId): TicketAttachment
+    {
+        $path = $file->store("attachments/{$ticket->id}", 'local');
+
+        return TicketAttachment::create([
+            'ticket_id'   => $ticket->id,
+            'user_id'     => $userId,
+            'filename'    => $file->getClientOriginalName(),
+            'stored_path' => $path,
+            'mime_type'   => $file->getMimeType() ?? 'application/octet-stream',
+            'size'        => $file->getSize(),
+        ]);
+    }
+
+    public function removeAttachment(TicketAttachment $attachment): void
+    {
+        Storage::disk('local')->delete($attachment->stored_path);
+        $attachment->delete();
     }
 
     public function mergeTickets(Ticket $source, Ticket $target, User $actor): Ticket

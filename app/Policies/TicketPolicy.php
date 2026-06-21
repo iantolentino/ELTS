@@ -11,20 +11,18 @@ class TicketPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('tickets.view');
+        return $user->hasAnyPermission(['tickets.view_all', 'tickets.view_own']);
     }
 
     public function view(User $user, Ticket $ticket): bool
     {
-        if (!$user->hasPermissionTo('tickets.view')) {
-            return false;
+        if ($user->hasPermissionTo('tickets.view_all')) {
+            return true;
         }
-
-        if ($user->hasRole('client')) {
+        if ($user->hasPermissionTo('tickets.view_own')) {
             return $ticket->requester_id === $user->id;
         }
-
-        return true;
+        return false;
     }
 
     public function create(User $user): bool
@@ -75,7 +73,7 @@ class TicketPolicy
 
     public function noteInternal(User $user): bool
     {
-        return $user->hasPermissionTo('tickets.note_internal');
+        return $user->hasPermissionTo('tickets.note');
     }
 
     public function changeStatus(User $user): bool
@@ -95,6 +93,6 @@ class TicketPolicy
 
     public function export(User $user): bool
     {
-        return $user->hasPermissionTo('tickets.export');
+        return $user->hasAnyPermission(['reports.export', 'tickets.view_all']);
     }
 }

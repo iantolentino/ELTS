@@ -4,17 +4,24 @@ use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
 use App\Http\Controllers\Tickets\BulkTicketController;
+use App\Http\Controllers\Tickets\TicketLinkController;
 use App\Http\Controllers\Tickets\TicketMergeController;
 use App\Http\Controllers\Tickets\TicketSearchController;
 use App\Http\Controllers\Tickets\TicketTagController;
 use App\Http\Controllers\Tickets\TicketWatcherController;
+use App\Http\Controllers\Tickets\TicketAttachmentController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\CustomFieldController as AdminCustomFieldController;
 use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController;
 use App\Http\Controllers\Admin\LoginHistoryController as AdminLoginHistoryController;
 use App\Http\Controllers\Admin\PermissionsController as AdminPermissionsController;
 use App\Http\Controllers\Admin\SessionController as AdminSessionController;
+use App\Http\Controllers\Admin\StatusController as AdminStatusController;
 use App\Http\Controllers\Admin\TeamController as AdminTeamController;
+use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Users\UserMentionController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\LoginHistoryController;
 use App\Http\Controllers\SessionController;
@@ -100,6 +107,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{ticket}/watch',                         [TicketWatcherController::class, 'store'])->name('watch');
         Route::delete('/{ticket}/watch',                       [TicketWatcherController::class, 'destroy'])->name('unwatch');
         Route::post('/{ticket}/merge',                         [TicketMergeController::class, 'store'])->name('merge');
+        Route::post('/{ticket}/parent',                        [TicketLinkController::class, 'store'])->name('parent.store');
+        Route::delete('/{ticket}/parent',                      [TicketLinkController::class, 'destroy'])->name('parent.destroy');
+        Route::post('/{ticket}/attachments',                   [TicketAttachmentController::class, 'store'])->name('attachments.store');
+        Route::get('/{ticket}/attachments/{attachment}/download', [TicketAttachmentController::class, 'download'])->name('attachments.download');
+        Route::delete('/{ticket}/attachments/{attachment}',    [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');
     });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
@@ -150,5 +162,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/teams/{team}/edit',    [AdminTeamController::class, 'edit'])->name('teams.edit');
         Route::put('/teams/{team}',         [AdminTeamController::class, 'update'])->name('teams.update');
         Route::delete('/teams/{team}',      [AdminTeamController::class, 'destroy'])->name('teams.destroy');
+
+        Route::get('/statuses',              [AdminStatusController::class, 'index'])->name('statuses.index');
+        Route::post('/statuses',             [AdminStatusController::class, 'store'])->name('statuses.store');
+        Route::put('/statuses/{status}',     [AdminStatusController::class, 'update'])->name('statuses.update');
+        Route::delete('/statuses/{status}',  [AdminStatusController::class, 'destroy'])->name('statuses.destroy');
+
+        Route::get('/categories',                [AdminCategoryController::class, 'index'])->name('categories.index');
+        Route::post('/categories',               [AdminCategoryController::class, 'store'])->name('categories.store');
+        Route::put('/categories/{category}',     [AdminCategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}',  [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+
+        Route::get('/custom-fields',                  [AdminCustomFieldController::class, 'index'])->name('custom-fields.index');
+        Route::post('/custom-fields',                 [AdminCustomFieldController::class, 'store'])->name('custom-fields.store');
+        Route::put('/custom-fields/{customField}',    [AdminCustomFieldController::class, 'update'])->name('custom-fields.update');
+        Route::delete('/custom-fields/{customField}', [AdminCustomFieldController::class, 'destroy'])->name('custom-fields.destroy');
+
+        Route::get('/templates',                 [AdminTemplateController::class, 'index'])->name('templates.index');
+        Route::get('/templates/create',          [AdminTemplateController::class, 'create'])->name('templates.create');
+        Route::post('/templates',                [AdminTemplateController::class, 'store'])->name('templates.store');
+        Route::get('/templates/{template}/edit', [AdminTemplateController::class, 'edit'])->name('templates.edit');
+        Route::put('/templates/{template}',      [AdminTemplateController::class, 'update'])->name('templates.update');
+        Route::delete('/templates/{template}',   [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
     });
+
+    Route::get('/users/mention-search', UserMentionController::class)->name('users.mention-search');
 });

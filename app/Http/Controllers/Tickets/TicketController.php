@@ -100,13 +100,16 @@ class TicketController extends Controller
 
         $ticket->load([
             'status', 'category', 'requester', 'assignee', 'team', 'tags',
+            'parentTicket:id,ticket_number,subject',
+            'childTickets:id,parent_ticket_id,ticket_number,subject',
             'replies.user', 'notes.user', 'watchers.user', 'customFieldValues.field',
+            'attachments.user',
         ]);
 
         /** @var User $user */
         $user = Auth::user();
 
-        $activity = $ticket->activity()->latest()->take(30)->get()->map(fn ($a) => [
+        $activity = $ticket->activities()->latest()->take(30)->get()->map(fn ($a) => [
             'id'          => $a->id,
             'description' => $a->description,
             'causer'      => $a->causer ? ['name' => $a->causer->name] : null,
@@ -138,6 +141,9 @@ class TicketController extends Controller
                 'assignee'          => $ticket->assignee ? ['id' => $ticket->assignee->id, 'name' => $ticket->assignee->name, 'avatar_url' => $avatarUrl($ticket->assignee)] : null,
                 'team'              => $ticket->team ? ['id' => $ticket->team->id, 'name' => $ticket->team->name] : null,
                 'tags'              => $ticket->tags->map(fn ($tag) => ['id' => $tag->id, 'name' => $tag->name, 'color' => $tag->color])->all(),
+                'parent_ticket'     => $ticket->parentTicket ? ['id' => $ticket->parentTicket->id, 'ticket_number' => $ticket->parentTicket->ticket_number, 'subject' => $ticket->parentTicket->subject] : null,
+                'child_tickets'     => $ticket->childTickets->map(fn ($c) => ['id' => $c->id, 'ticket_number' => $c->ticket_number, 'subject' => $c->subject])->all(),
+                'attachments'       => $ticket->attachments->map(fn ($a) => ['id' => $a->id, 'filename' => $a->filename, 'mime_type' => $a->mime_type, 'size' => $a->size, 'user' => ['name' => $a->user?->name ?? 'Unknown'], 'created_at' => $a->created_at->format('M d, Y')])->all(),
                 'watchers'          => $ticket->watchers->map(fn ($w) => ['id' => $w->user?->id, 'name' => $w->user?->name ?? 'Deleted User'])->filter(fn ($w) => $w['id'])->values()->all(),
                 'is_watching'       => $ticket->watchers->contains('user_id', $user->id),
                 'replies'           => $ticket->replies->map(fn ($r) => [
@@ -171,6 +177,8 @@ class TicketController extends Controller
                 'watch'           => $user->can('watch', $ticket),
                 'merge'           => $user->can('merge', Ticket::class),
                 'delete'          => $user->can('delete', $ticket),
+                'link'            => $user->can('update', $ticket),
+                'attach'          => $user->can('update', $ticket),
             ],
             'statuses' => TicketStatus::orderBy('sort_order')->get(['id', 'name', 'color']),
             'agents'   => User::role(['super_admin', 'admin', 'supervisor', 'agent'])->orderBy('name')->get(['id', 'name']),
