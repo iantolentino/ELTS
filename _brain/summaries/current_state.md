@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-05 — Build client registration page with email verification
+**Next task:** P1-06 — Build forgot password / reset password flow
 
 ---
 
@@ -79,6 +79,7 @@
 - [x] Models created: Department.php, Team.php with relationships; User.php updated with team()/department() BelongsTo
 - [x] RolesAndPermissionsSeeder: 60 permissions, 5 roles (super_admin/admin/supervisor/agent/client) seeded and verified in DB
 - [x] Login page: LoginRequest (rate-limited), AuthService, AuthController; Pages/Auth/Login.tsx (email, password+toggle, remember me); Dashboard/Index.tsx placeholder
+- [x] Registration + email verification: RegisterRequest, AuthService::register(), RegisterController, VerifyEmailController, EmailVerificationNotificationController; Register.tsx, VerifyEmail.tsx; dashboard now requires verified middleware
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 

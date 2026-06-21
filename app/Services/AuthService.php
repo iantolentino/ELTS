@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -55,6 +57,27 @@ class AuthService
     public function redirectPath(User $user): string
     {
         return route('dashboard');
+    }
+
+    /**
+     * Register a new client user, assign the client role, fire Registered event,
+     * and log them in. The Registered event triggers the verification email.
+     */
+    public function register(RegisterRequest $request): User
+    {
+        $user = User::create([
+            'name'     => $request->string('name'),
+            'email'    => $request->string('email'),
+            'password' => $request->string('password'),
+        ]);
+
+        $user->assignRole('client');
+
+        event(new Registered($user));
+
+        Auth::login($user);
+
+        return $user;
     }
 
     public function logout(Request $request): void

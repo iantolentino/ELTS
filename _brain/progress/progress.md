@@ -109,7 +109,16 @@
   - Frontend: Pages/Auth/Login.tsx — email field, password with show/hide toggle, remember me checkbox, forgot password link, register link
   - Pages/Dashboard/Index.tsx — placeholder for post-login redirect (real dashboard in Phase 7)
   - Build: 0 errors, 940 modules, Login-*.js 8.53 kB
-- [ ] P1-05 — Build client registration page with email verification
+- [x] P1-05 — Build client registration page with email verification
+  - RegisterRequest: name/email/password/confirmation + Password::min(8)->letters()->numbers()
+  - AuthService::register(): create user, assign client role, fire Registered event (triggers verification email), login
+  - RegisterController: show (checks portal.registration_enabled config), store
+  - VerifyEmailController: notice (redirect if already verified), verify (EmailVerificationRequest::fulfill)
+  - EmailVerificationNotificationController: resend with throttle:6,1
+  - Routes: GET/POST /register (guest), GET /email/verify (auth), GET /email/verify/{id}/{hash} (signed), POST /email/verification-notification (throttle), /dashboard moved behind verified middleware
+  - Pages/Auth/Register.tsx: name, email, password+toggle, confirm password+toggle
+  - Pages/Auth/VerifyEmail.tsx: email notice, resend button, Inertia logout
+  - Build: 0 errors, 942 modules
 - [ ] P1-06 — Build forgot password / reset password flow
 - [ ] P1-07 — Build 2FA setup page (QR code, TOTP verification)
 - [ ] P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
@@ -372,5 +381,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-04 — Build login page
-- Next task: P1-05 — Build client registration page with email verification
+- Last completed task: P1-05 — Build client registration page with email verification
+- Next task: P1-06 — Build forgot password / reset password flow
