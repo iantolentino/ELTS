@@ -316,7 +316,13 @@
   - TicketController::show(): passes is_watching flag (contains user_id check) + can.watch
   - Show.tsx: Watchers sidebar card — Watch/Unwatch button (BellIcon/BellSlashIcon toggle), watcher avatar initials grid with name tooltip
   - Build: 0 errors
-- [ ] P2-15 — Build bulk actions: select multiple tickets → assign / close / change status / tag / delete
+- [x] P2-15 — Build bulk actions: select multiple tickets → assign / close / change status / tag / delete
+  - BulkActionRequest: validates ticket_ids array + action enum + conditional assignee_id/status_id
+  - TicketService::bulkAction(): iterates tickets, dispatches to existing service methods via match
+  - BulkTicketController: per-action Gate checks (assign/changeStatus policy, delete permission)
+  - Route: POST /tickets/bulk (placed before /{ticket} wildcard)
+  - Index.tsx: checkbox column with stopPropagation, select-all header checkbox (indeterminate state via ref), selectedIds state, blue bulk action bar (appears when any selected) with action select + conditional status/assignee inputs + Apply/Clear; row highlighted when selected; selected count shown in header
+  - Build: 0 errors
 - [ ] P2-16 — Build ticket merge UI (select target ticket, confirm, preserve thread)
 - [ ] P2-17 — Build parent-child ticket linking UI
 - [ ] P2-18 — Build Admin: Custom status management (create, edit, reorder, set color)
@@ -545,5 +551,5 @@
 
 ## CURRENT STATUS
 - Phase: 2 — IN PROGRESS
-- Last completed task: P2-14 — Ticket watcher subscribe/unsubscribe
-- Next task: P2-15 — Bulk actions: select multiple tickets → assign / close / change status / tag / delete
+- Last completed task: P2-15 — Bulk actions (assign / change status / close / delete)
+- Next task: P2-16 — Ticket merge UI (select target ticket, confirm, preserve thread)

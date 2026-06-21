@@ -4,13 +4,10 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Badge, Button, Input, Table } from '@/Components/UI';
 import type { Column } from '@/Components/UI/Table';
 import type { PaginatedData, Ticket, TicketStatus, TicketCategory } from '@/types';
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 
-interface AgentOption {
-    id: number;
-    name: string;
-}
+interface AgentOption { id: number; name: string; }
 
 interface Filters {
     search:      string;
@@ -41,12 +38,24 @@ const PRIORITIES = [
     { value: 'low',      label: 'Low' },
 ];
 
+const BULK_ACTIONS = [
+    { value: 'change_status', label: 'Change Status' },
+    { value: 'assign',        label: 'Assign To' },
+    { value: 'close',         label: 'Close' },
+    { value: 'delete',        label: 'Delete' },
+];
+
 const PER_PAGE_OPTIONS = [15, 25, 50, 100];
 
 const SELECT_CLS = 'border border-[--color-border] rounded-lg px-3 py-2 text-sm text-[--color-text] bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none';
 
 export default function Index({ tickets, filters, statuses, categories, agents }: Props) {
-    const [search, setSearch] = useState(filters.search ?? '');
+    const [search, setSearch]         = useState(filters.search ?? '');
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [bulkAction, setBulkAction] = useState('');
+    const [bulkStatus, setBulkStatus] = useState('');
+    const [bulkAssignee, setBulkAssignee] = useState('');
+    const [bulkProcessing, setBulkProcessing] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const applyFilter = useCallback((overrides: Partial<Filters>) => {
@@ -76,18 +85,63 @@ export default function Index({ tickets, filters, statuses, categories, agents }
         filters.category_id || filters.assignee_id || filters.date_from || filters.date_to
     );
 
+    const pageIds       = tickets.data.map(t => t.id);
+    const allSelected   = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+    const someSelected  = selectedIds.length > 0 && !allSelected;
+
+    const toggleAll = () => {
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+        } else {
+            setSelectedIds(prev => [...new Set([...prev, ...pageIds])]);
+        }
+    };
+
+    const toggleOne = (id: number) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const clearSelection = () => { setSelectedIds([]); setBulkAction(''); setBulkStatus(''); setBulkAssignee(''); };
+
+    const applyBulk = () => {
+        if (!bulkAction || selectedIds.length === 0) return;
+        if (bulkAction === 'delete' && !confirm(`Delete ${selectedIds.length} ticket(s)? This cannot be undone.`)) return;
+
+        const payload: Record<string, unknown> = { ticket_ids: selectedIds, action: bulkAction };
+        if (bulkAction === 'change_status') payload.status_id = bulkStatus;
+        if (bulkAction === 'assign')        payload.assignee_id = bulkAssignee || null;
+
+        setBulkProcessing(true);
+        router.post('/tickets/bulk', payload, {
+            onSuccess: () => clearSelection(),
+            onFinish:  () => setBulkProcessing(false),
+        });
+    };
+
     const columns: Column<Ticket>[] = [
+        {
+            key: 'select' as keyof Ticket,
+            label: '',
+            className: 'w-10',
+            render: (row) => (
+                <div onClick={e => e.stopPropagation()} className="flex items-center justify-center">
+                    <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleOne(row.id)}
+                        className="w-4 h-4 text-primary-600 rounded border-[--color-border] cursor-pointer"
+                    />
+                </div>
+            ),
+        },
         {
             key: 'ticket_number',
             label: '#',
             sortable: true,
             className: 'w-36',
             render: (row) => (
-                <Link
-                    href={`/tickets/${row.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="font-mono text-xs text-primary-600 hover:underline font-semibold"
-                >
+                <Link href={`/tickets/${row.id}`} onClick={e => e.stopPropagation()}
+                    className="font-mono text-xs text-primary-600 hover:underline font-semibold">
                     {row.ticket_number}
                 </Link>
             ),
@@ -103,17 +157,12 @@ export default function Index({ tickets, filters, statuses, categories, agents }
                     {row.tags.length > 0 && (
                         <div className="flex gap-1 ml-1 flex-shrink-0">
                             {row.tags.slice(0, 2).map(tag => (
-                                <span
-                                    key={tag.id}
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
-                                    style={{ backgroundColor: tag.color ?? '#6B7280' }}
-                                >
+                                <span key={tag.id} className="px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
+                                    style={{ backgroundColor: tag.color ?? '#6B7280' }}>
                                     {tag.name}
                                 </span>
                             ))}
-                            {row.tags.length > 2 && (
-                                <span className="text-[10px] text-[--color-text-muted]">+{row.tags.length - 2}</span>
-                            )}
+                            {row.tags.length > 2 && <span className="text-[10px] text-[--color-text-muted]">+{row.tags.length - 2}</span>}
                         </div>
                     )}
                 </div>
@@ -123,10 +172,8 @@ export default function Index({ tickets, filters, statuses, categories, agents }
             key: 'status',
             label: 'Status',
             render: (row) => (
-                <span
-                    className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: row.status.color }}
-                >
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: row.status.color }}>
                     {row.status.name}
                 </span>
             ),
@@ -144,9 +191,7 @@ export default function Index({ tickets, filters, statuses, categories, agents }
         {
             key: 'category',
             label: 'Category',
-            render: (row) => (
-                <span className="text-xs text-[--color-text-muted]">{row.category?.name ?? '—'}</span>
-            ),
+            render: (row) => <span className="text-xs text-[--color-text-muted]">{row.category?.name ?? '—'}</span>,
         },
         {
             key: 'requester',
@@ -178,9 +223,7 @@ export default function Index({ tickets, filters, statuses, categories, agents }
             key: 'created_at',
             label: 'Created',
             sortable: true,
-            render: (row) => (
-                <span className="text-xs text-[--color-text-muted] whitespace-nowrap">{row.created_at}</span>
-            ),
+            render: (row) => <span className="text-xs text-[--color-text-muted] whitespace-nowrap">{row.created_at}</span>,
         },
     ];
 
@@ -196,15 +239,11 @@ export default function Index({ tickets, filters, statuses, categories, agents }
                         <h1 className="text-xl font-semibold text-[--color-text]">Tickets</h1>
                         <p className="text-sm text-[--color-text-muted] mt-0.5">
                             {tickets.total.toLocaleString()} {tickets.total === 1 ? 'ticket' : 'tickets'}
+                            {selectedIds.length > 0 && <span className="ml-2 text-primary-600 font-medium">· {selectedIds.length} selected</span>}
                         </p>
                     </div>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => router.visit('/tickets/create')}
-                    >
-                        <PlusIcon className="w-4 h-4 mr-1.5" />
-                        New Ticket
+                    <Button variant="primary" size="sm" onClick={() => router.visit('/tickets/create')}>
+                        <PlusIcon className="w-4 h-4 mr-1.5" />New Ticket
                     </Button>
                 </div>
 
@@ -212,98 +251,134 @@ export default function Index({ tickets, filters, statuses, categories, agents }
                 <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">
                     <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex-1 min-w-56">
-                            <Input
-                                placeholder="Search ticket #, subject, or requester…"
-                                value={search}
-                                onChange={(e) => handleSearch(e.target.value)}
-                            />
+                            <Input placeholder="Search ticket #, subject, or requester…" value={search} onChange={e => handleSearch(e.target.value)} />
                         </div>
-
-                        <select
-                            value={filters.status_id ?? ''}
-                            onChange={(e) => applyFilter({ status_id: e.target.value })}
-                            className={SELECT_CLS}
-                        >
+                        <select value={filters.status_id ?? ''} onChange={e => applyFilter({ status_id: e.target.value })} className={SELECT_CLS}>
                             <option value="">All Statuses</option>
-                            {statuses.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
+                            {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
-
-                        <select
-                            value={filters.priority ?? ''}
-                            onChange={(e) => applyFilter({ priority: e.target.value })}
-                            className={SELECT_CLS}
-                        >
+                        <select value={filters.priority ?? ''} onChange={e => applyFilter({ priority: e.target.value })} className={SELECT_CLS}>
                             <option value="">All Priorities</option>
-                            {PRIORITIES.map(p => (
-                                <option key={p.value} value={p.value}>{p.label}</option>
-                            ))}
+                            {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                         </select>
-
-                        <select
-                            value={filters.category_id ?? ''}
-                            onChange={(e) => applyFilter({ category_id: e.target.value })}
-                            className={SELECT_CLS}
-                        >
+                        <select value={filters.category_id ?? ''} onChange={e => applyFilter({ category_id: e.target.value })} className={SELECT_CLS}>
                             <option value="">All Categories</option>
-                            {categories.map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-
-                        <select
-                            value={filters.assignee_id ?? ''}
-                            onChange={(e) => applyFilter({ assignee_id: e.target.value })}
-                            className={SELECT_CLS}
-                        >
+                        <select value={filters.assignee_id ?? ''} onChange={e => applyFilter({ assignee_id: e.target.value })} className={SELECT_CLS}>
                             <option value="">All Assignees</option>
                             <option value="unassigned">Unassigned</option>
-                            {agents.map(a => (
-                                <option key={a.id} value={a.id}>{a.name}</option>
-                            ))}
+                            {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                         </select>
-
                         {hasFilters && (
-                            <button
-                                onClick={clearFilters}
-                                className="flex items-center gap-1 text-sm text-[--color-text-muted] hover:text-danger-600 transition-colors whitespace-nowrap"
-                            >
-                                <XMarkIcon className="w-4 h-4" />
-                                Clear filters
+                            <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-[--color-text-muted] hover:text-danger-600 transition-colors whitespace-nowrap">
+                                <XMarkIcon className="w-4 h-4" />Clear filters
                             </button>
                         )}
                     </div>
-
                     <div className="flex items-center gap-3">
                         <span className="text-xs text-[--color-text-muted] whitespace-nowrap">Created:</span>
-                        <input
-                            type="date"
-                            value={filters.date_from ?? ''}
-                            onChange={(e) => applyFilter({ date_from: e.target.value })}
-                            className="border border-[--color-border] rounded-lg px-3 py-1.5 text-sm text-[--color-text] bg-white focus:ring-2 focus:ring-primary-500 outline-none"
-                        />
+                        <input type="date" value={filters.date_from ?? ''} onChange={e => applyFilter({ date_from: e.target.value })}
+                            className="border border-[--color-border] rounded-lg px-3 py-1.5 text-sm text-[--color-text] bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
                         <span className="text-xs text-[--color-text-muted]">to</span>
-                        <input
-                            type="date"
-                            value={filters.date_to ?? ''}
-                            onChange={(e) => applyFilter({ date_to: e.target.value })}
-                            className="border border-[--color-border] rounded-lg px-3 py-1.5 text-sm text-[--color-text] bg-white focus:ring-2 focus:ring-primary-500 outline-none"
-                        />
+                        <input type="date" value={filters.date_to ?? ''} onChange={e => applyFilter({ date_to: e.target.value })}
+                            className="border border-[--color-border] rounded-lg px-3 py-1.5 text-sm text-[--color-text] bg-white focus:ring-2 focus:ring-primary-500 outline-none" />
                     </div>
                 </div>
 
-                {/* Table */}
-                <Table<Ticket>
-                    columns={columns}
-                    data={tickets.data}
-                    rowKey={(row) => row.id}
-                    sortKey={filters.sort_by}
-                    sortDir={filters.sort_dir}
-                    onSort={handleSort}
-                    onRowClick={(row) => router.visit(`/tickets/${row.id}`)}
-                    emptyMessage="No tickets found. Try adjusting your filters."
-                />
+                {/* Bulk action bar */}
+                {selectedIds.length > 0 && (
+                    <div className="bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
+                        <span className="text-sm font-medium text-primary-800">{selectedIds.length} selected</span>
+                        <div className="flex items-center gap-2 flex-1 flex-wrap">
+                            <select value={bulkAction} onChange={e => { setBulkAction(e.target.value); setBulkStatus(''); setBulkAssignee(''); }}
+                                className="border border-primary-300 rounded-lg px-3 py-1.5 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 outline-none">
+                                <option value="">Choose action…</option>
+                                {BULK_ACTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                            </select>
+
+                            {bulkAction === 'change_status' && (
+                                <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}
+                                    className="border border-primary-300 rounded-lg px-3 py-1.5 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="">Select status…</option>
+                                    {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            )}
+
+                            {bulkAction === 'assign' && (
+                                <select value={bulkAssignee} onChange={e => setBulkAssignee(e.target.value)}
+                                    className="border border-primary-300 rounded-lg px-3 py-1.5 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 outline-none">
+                                    <option value="">Unassigned</option>
+                                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                </select>
+                            )}
+
+                            {bulkAction === 'delete' && (
+                                <span className="text-sm text-danger-600 font-medium">This will permanently delete the selected tickets.</span>
+                            )}
+
+                            <Button
+                                variant={bulkAction === 'delete' ? 'danger' : 'primary'}
+                                size="sm"
+                                disabled={!bulkAction || bulkProcessing || (bulkAction === 'change_status' && !bulkStatus)}
+                                onClick={applyBulk}
+                            >
+                                {bulkProcessing ? 'Applying…' : 'Apply'}
+                            </Button>
+                        </div>
+                        <button onClick={clearSelection} className="text-sm text-primary-600 hover:text-primary-800 transition-colors whitespace-nowrap flex items-center gap-1">
+                            <XMarkIcon className="w-4 h-4" />Clear
+                        </button>
+                    </div>
+                )}
+
+                {/* Table with select-all in header */}
+                <div className="bg-white rounded-xl border border-[--color-border] overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="border-b border-[--color-border] bg-[--color-bg]">
+                                <tr>
+                                    <th className="w-10 px-4 py-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={allSelected}
+                                            ref={el => { if (el) el.indeterminate = someSelected; }}
+                                            onChange={toggleAll}
+                                            className="w-4 h-4 text-primary-600 rounded border-[--color-border] cursor-pointer"
+                                        />
+                                    </th>
+                                    {columns.slice(1).map(col => (
+                                        <th key={String(col.key)}
+                                            className={`px-4 py-3 text-left text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider ${col.className ?? ''} ${col.sortable ? 'cursor-pointer select-none hover:text-[--color-text]' : ''}`}
+                                            onClick={() => col.sortable && handleSort(String(col.key))}>
+                                            <span className="flex items-center gap-1">
+                                                {col.label}
+                                                {col.sortable && filters.sort_by === String(col.key) && (
+                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${filters.sort_dir === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </span>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[--color-border]">
+                                {tickets.data.length === 0 ? (
+                                    <tr><td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-[--color-text-muted]">No tickets found. Try adjusting your filters.</td></tr>
+                                ) : tickets.data.map(row => (
+                                    <tr key={row.id}
+                                        onClick={() => router.visit(`/tickets/${row.id}`)}
+                                        className={`cursor-pointer transition-colors hover:bg-[--color-bg] ${selectedIds.includes(row.id) ? 'bg-primary-50/60' : ''}`}>
+                                        {columns.map(col => (
+                                            <td key={String(col.key)} className={`px-4 py-3 ${col.className ?? ''}`}>
+                                                {col.render ? col.render(row) : String((row as Record<string, unknown>)[String(col.key)] ?? '')}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 {/* Pagination */}
                 {tickets.last_page > 1 && (
@@ -311,33 +386,21 @@ export default function Index({ tickets, filters, statuses, categories, agents }
                         <p className="text-sm text-[--color-text-muted]">
                             Showing {tickets.from}–{tickets.to} of {tickets.total.toLocaleString()}
                         </p>
-
                         <div className="flex items-center gap-1">
                             {tickets.links.map((link, i) => (
-                                <button
-                                    key={i}
-                                    disabled={!link.url}
+                                <button key={i} disabled={!link.url}
                                     onClick={() => link.url && router.visit(link.url, { preserveState: true, preserveScroll: true })}
                                     className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                                        link.active
-                                            ? 'bg-primary-600 text-white border-primary-600'
-                                            : 'border-[--color-border] text-[--color-text-muted] hover:bg-[--color-bg] disabled:opacity-40 disabled:cursor-not-allowed'
+                                        link.active ? 'bg-primary-600 text-white border-primary-600' : 'border-[--color-border] text-[--color-text-muted] hover:bg-[--color-bg] disabled:opacity-40 disabled:cursor-not-allowed'
                                     }`}
-                                    dangerouslySetInnerHTML={{ __html: link.label }}
-                                />
+                                    dangerouslySetInnerHTML={{ __html: link.label }} />
                             ))}
                         </div>
-
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-[--color-text-muted]">Per page:</span>
-                            <select
-                                value={filters.per_page}
-                                onChange={(e) => applyFilter({ per_page: Number(e.target.value) })}
-                                className="border border-[--color-border] rounded-lg px-2 py-1.5 text-sm bg-white text-[--color-text]"
-                            >
-                                {PER_PAGE_OPTIONS.map(n => (
-                                    <option key={n} value={n}>{n}</option>
-                                ))}
+                            <select value={filters.per_page} onChange={e => applyFilter({ per_page: Number(e.target.value) })}
+                                className="border border-[--color-border] rounded-lg px-2 py-1.5 text-sm bg-white text-[--color-text]">
+                                {PER_PAGE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
                             </select>
                         </div>
                     </div>

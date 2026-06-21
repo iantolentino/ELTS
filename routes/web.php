@@ -3,6 +3,7 @@
 use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
+use App\Http\Controllers\Tickets\BulkTicketController;
 use App\Http\Controllers\Tickets\TicketTagController;
 use App\Http\Controllers\Tickets\TicketWatcherController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
@@ -83,6 +84,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/',                                        [TicketController::class, 'index'])->name('index');
         Route::get('/create',                                  [TicketController::class, 'create'])->name('create');
         Route::post('/',                                       [TicketController::class, 'store'])->name('store');
+        Route::post('/bulk',                                   [BulkTicketController::class, 'store'])->name('bulk');
         Route::get('/{ticket}',                                [TicketController::class, 'show'])->name('show');
         Route::delete('/{ticket}',                             [TicketController::class, 'destroy'])->name('destroy');
         Route::patch('/{ticket}/status',                       [TicketController::class, 'changeStatus'])->name('status');

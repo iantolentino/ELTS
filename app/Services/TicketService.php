@@ -134,6 +134,22 @@ class TicketService
         ]);
     }
 
+    public function bulkAction(array $ticketIds, string $action, array $data, User $actor): int
+    {
+        $tickets = Ticket::whereIn('id', $ticketIds)->get();
+
+        foreach ($tickets as $ticket) {
+            match ($action) {
+                'assign'        => $this->assign($ticket, isset($data['assignee_id']) ? (int) $data['assignee_id'] : null, null),
+                'change_status' => $this->changeStatus($ticket, (int) $data['status_id']),
+                'close'         => $this->closeTicket($ticket, $actor),
+                'delete'        => $this->deleteTicket($ticket),
+            };
+        }
+
+        return $tickets->count();
+    }
+
     public function addWatcher(Ticket $ticket, int $userId): void
     {
         TicketWatcher::firstOrCreate([
