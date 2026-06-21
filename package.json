@@ -20,6 +20,12 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@inertiajs/react": "^3.4.0",
+        "@tiptap/extension-link": "^3.27.1",
+        "@tiptap/extension-placeholder": "^3.27.1",
+        "@tiptap/extension-underline": "^3.27.1",
+        "@tiptap/pm": "^3.27.1",
+        "@tiptap/react": "^3.27.1",
+        "@tiptap/starter-kit": "^3.27.1",
         "axios": "^1.18.0",
         "react": "^19.2.7",
         "react-dom": "^19.2.7"

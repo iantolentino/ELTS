@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Tickets\TicketController;
+use App\Http\Controllers\Tickets\TicketReplyController;
+use App\Http\Controllers\Tickets\TicketNoteController;
 use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController;
 use App\Http\Controllers\Admin\LoginHistoryController as AdminLoginHistoryController;
 use App\Http\Controllers\Admin\PermissionsController as AdminPermissionsController;
@@ -72,6 +75,19 @@ Route::middleware('auth')->group(function () {
 */
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard/Index'))->name('dashboard');
+
+    Route::prefix('tickets')->name('tickets.')->group(function () {
+        Route::get('/',                                        [TicketController::class, 'index'])->name('index');
+        Route::get('/create',                                  [TicketController::class, 'create'])->name('create');
+        Route::post('/',                                       [TicketController::class, 'store'])->name('store');
+        Route::get('/{ticket}',                                [TicketController::class, 'show'])->name('show');
+        Route::delete('/{ticket}',                             [TicketController::class, 'destroy'])->name('destroy');
+        Route::patch('/{ticket}/status',                       [TicketController::class, 'changeStatus'])->name('status');
+        Route::patch('/{ticket}/priority',                     [TicketController::class, 'changePriority'])->name('priority');
+        Route::patch('/{ticket}/assign',                       [TicketController::class, 'assign'])->name('assign');
+        Route::post('/{ticket}/replies',                       [TicketReplyController::class, 'store'])->name('replies.store');
+        Route::post('/{ticket}/notes',                         [TicketNoteController::class, 'store'])->name('notes.store');
+    });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',         [ProfileController::class, 'update'])->name('profile.update');

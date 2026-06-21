@@ -247,18 +247,55 @@
 ## PHASE 2 — TICKET CORE
 **Goal:** Full ticket CRUD with all metadata, custom fields, and bulk actions.
 
-- [ ] P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments
-- [ ] P2-02 — Migrations: custom_fields, custom_field_values, ticket_templates
-- [ ] P2-03 — Seed default statuses: Open, In Progress, On Hold, Resolved, Closed
-- [ ] P2-04 — Build TicketService with create/update/close/delete/merge methods
-- [ ] P2-05 — Build Ticket index page: list view with filters (status, priority, category, assignee, date range), search, sort, pagination
-- [ ] P2-06 — Build Ticket show page: full thread view (replies + notes interleaved), activity timeline sidebar
-- [ ] P2-07 — Build Ticket create form: subject, description (Tiptap), category, priority, custom fields, attachments, assignee
-- [ ] P2-08 — Build Ticket reply form: WYSIWYG editor (Tiptap), file attach, CC/BCC, canned response selector
-- [ ] P2-09 — Build Internal note form: same editor but marked private, not visible to client
-- [ ] P2-10 — Build ticket status change controls (drag-to-status or dropdown)
-- [ ] P2-11 — Build ticket priority change control
-- [ ] P2-12 — Build ticket assignment control (assign to agent, team)
+- [x] P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments
+  - 9 migrations (120000–120008): ticket_statuses, ticket_categories (self-ref FK), ticket_tags, tickets (soft deletes, self-ref parent/merged FKs, priority enum, source enum), ticket_replies, ticket_notes, ticket_tag_pivot (composite PK), ticket_watchers, ticket_attachments
+  - Models created: Ticket (SoftDeletes + all relationships), TicketStatus, TicketCategory, TicketTag, TicketReply, TicketNote, TicketWatcher, TicketAttachment
+- [x] P2-02 — Migrations: custom_fields, custom_field_values, ticket_templates
+  - 3 migrations (120009–120011): custom_fields (type enum), custom_field_values (unique ticket+field), ticket_templates (json tag_ids + custom_field_defaults)
+  - Models created: CustomField, CustomFieldValue, TicketTemplate
+  - All 12 migrations applied successfully to elts_db
+- [x] P2-03 — Seed default statuses: Open, In Progress, On Hold, Resolved, Closed
+  - DefaultStatusesSeeder: 5 statuses with colors (green/blue/yellow/purple/gray), sort_order, is_default (Open), is_closed (Closed)
+  - DatabaseSeeder updated to call DefaultStatusesSeeder after RolesAndPermissionsSeeder
+  - Seeded and verified in DB
+- [x] P2-04 — Build TicketService with create/update/close/delete/merge methods
+  - TicketRepositoryInterface + EloquentTicketRepository (paginate with 7 filters, findOrFail with all relations, create/update/delete)
+  - TicketService: listTickets (client auto-filter by requester_id), createTicket (generates TKT-00001 ticket_number post-insert), updateTicket, closeTicket (uses is_closed status), deleteTicket (soft delete), mergeTickets (moves replies/notes/attachments/watchers in DB transaction)
+  - RepositoryServiceProvider: TicketRepositoryInterface → EloquentTicketRepository binding added
+- [x] P2-05 — Build Ticket index page: list view with filters (status, priority, category, assignee, date range), search, sort, pagination
+  - TicketPolicy: viewAny/view/create/update/delete/merge/assign/reply/noteInternal/changeStatus/changePriority/export (auto-discovered)
+  - ListTicketsRequest: authorize via TicketPolicy, validates 10 filter params
+  - TicketController::index() (App\Http\Controllers\Tickets): passes paginated tickets, filters, statuses, categories, agents to Inertia
+  - Route: GET /tickets → tickets.index (auth+verified group)
+  - Pages/Tickets/Index.tsx: debounced search, 5 filter selects (status/priority/category/assignee), date range row, sortable Table with VIP star + tag chips, colored status badge, priority Badge with dot, requester/assignee avatars, pagination, per-page selector; client auto-sees only own tickets
+  - types/index.d.ts: TicketStatus, TicketCategory, TicketTag, TicketUserMinimal, Ticket interfaces added
+  - Build: 1288 modules, 0 errors
+- [x] P2-06 — Build Ticket show page: full thread view (replies + notes interleaved), activity timeline sidebar
+  - Pages/Tickets/Show.tsx: two-column layout (2/3 thread + 1/3 sidebar)
+  - Thread: original description card + interleaved replies/notes sorted by created_at; internal notes styled with amber background + lock icon
+  - Reply/Note form tabs with TiptapEditor (hidden from clients); router.post to /tickets/{id}/replies or /notes
+  - Sidebar: status/priority/assignee/team selects (immediate router.patch on change), requester info card, due date, activity timeline
+  - Tags chip display, VIP star in header, delete button (confirm dialog)
+- [x] P2-07 — Build Ticket create form: subject, description (Tiptap), category, priority, custom fields, attachments, assignee
+  - Pages/Tickets/Create.tsx: subject Input, TiptapEditor for description (driven by useForm setData), priority/category selects, assignee/team selects, status select (defaults to is_default status), due date, custom fields (text/textarea/select/number/date types), VIP checkbox
+  - useForm post('/tickets') — description synced into form via setData('description', html)
+- [x] P2-08 — Build Ticket reply form: WYSIWYG editor (Tiptap), file attach, CC/BCC, canned response selector
+  - TiptapEditor.tsx: full toolbar (Bold/Italic/Underline/Strike/H2/H3/BulletList/OrderedList/Blockquote/Code/CodeBlock)
+  - Reply tab in Show.tsx: router.post to /tickets/{id}/replies; CreateReplyRequest validates + authorizes
+  - TicketReplyController: store() → TicketService::addReply() (sets first_response_at if null + actor is not requester)
+- [x] P2-09 — Build Internal note form: same editor but marked private, not visible to client
+  - Note tab in Show.tsx: amber-styled, lock icon, "Internal Note" label; hidden from client (can.note_internal check)
+  - TicketNoteController: store() → TicketService::addNote()
+- [x] P2-10 — Build ticket status change controls (drag-to-status or dropdown)
+  - Sidebar status select in Show.tsx: immediate router.patch to /tickets/{id}/status
+  - TicketController::changeStatus() + TicketService::changeStatus() (auto-sets/clears closed_at)
+- [x] P2-11 — Build ticket priority change control
+  - Sidebar priority select in Show.tsx: immediate router.patch to /tickets/{id}/priority
+  - TicketController::changePriority() + TicketService delegates to repository update
+- [x] P2-12 — Build ticket assignment control (assign to agent, team)
+  - Sidebar assignee + team selects in Show.tsx: immediate router.patch to /tickets/{id}/assign
+  - TicketController::assign() + AssignTicketRequest validates assignee_id/team_id
+  - Build: 1343 modules, 0 errors (Tiptap chunk: 422 kB)
 - [ ] P2-13 — Build tag management: add/remove tags on ticket, tag CRUD in settings
 - [ ] P2-14 — Build ticket watcher subscribe/unsubscribe
 - [ ] P2-15 — Build bulk actions: select multiple tickets → assign / close / change status / tag / delete
@@ -489,6 +526,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 1 — IN PROGRESS
-- Last completed task: P1-18 — Unit tests: UserService, registration, login, 2FA
-- Next task: P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments
+- Phase: 2 — IN PROGRESS
+- Last completed task: P2-12 — Ticket assignment control (assign agent + team in Show sidebar)
+- Next task: P2-13 — Tag management: add/remove tags on ticket, tag CRUD in settings

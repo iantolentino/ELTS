@@ -3,11 +3,11 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 1 COMPLETE, PHASE 2 IN PROGRESS
+## STATE: EXECUTION_MODE — PHASE 2 IN PROGRESS
 
 **Last updated:** 2026-06-21
-**Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P2-01 — Migrations: tickets, ticket_replies, ticket_notes, ticket_statuses, ticket_categories, ticket_tags, ticket_tag_pivot, ticket_watchers, ticket_attachments
+**Current phase:** Phase 2 — Ticket Core (IN PROGRESS)
+**Next task:** P2-13 — Tag management: add/remove tags on ticket, tag CRUD in settings
 
 ---
 
@@ -98,7 +98,28 @@
 - [x] Login history: login_histories migration (user_id nullable FK, email, ip, user_agent, status enum, created_at only); LoginHistory model; LoginHistoryService (record/forUser/paginate); AuthService updated to record success+failed on every attempt; Admin/LoginHistoryController (audit.view guard, filterable paginated table); LoginHistoryController (user's own last 50); Admin/LoginHistory/Index.tsx + Profile/LoginHistory.tsx; Profile/Edit.tsx security card links to login history; PaginatedData<T> added to types/index.d.ts
 - [x] Active sessions: SESSION_DRIVER=database (.env + .env.example); SessionService (DB::table sessions — getForUser/revokeSession/revokeOtherSessions/paginateAll/revokeById); SessionController (user routes: index, destroy, destroyOthers — all guard own current session); Admin/SessionController (audit.view guard, force-logout any session except own); Profile/Sessions.tsx (parseBrowser+parseOS+timeAgo, bulk revoke button, current session badge, per-session revoke); Admin/Sessions/Index.tsx (debounced search, Force logout button, "Your session" badge); Profile/Edit.tsx security card now has Active Sessions + Login History links; Sidebar: Active Sessions in Developer group
 
+- [x] Ticket core migrations: ticket_statuses, ticket_categories, ticket_tags, tickets (soft deletes, self-ref FKs, priority/source enums), ticket_replies, ticket_notes, ticket_tag_pivot, ticket_watchers, ticket_attachments
+- [x] Custom field migrations: custom_fields, custom_field_values, ticket_templates — all 12 new migrations applied
+- [x] Default statuses seeded: Open (green, default), In Progress (blue), On Hold (yellow), Resolved (purple), Closed (gray, is_closed=true)
+- [x] Models created: Ticket, TicketStatus, TicketCategory, TicketTag, TicketReply, TicketNote, TicketWatcher, TicketAttachment, CustomField, CustomFieldValue, TicketTemplate
+- [x] TicketRepositoryInterface + EloquentTicketRepository (paginate with 7 filters, FIELD() priority sort, findOrFail with all relations)
+- [x] TicketService: listTickets/createTicket (TKT-00001 number)/updateTicket/closeTicket/deleteTicket/mergeTickets (DB transaction, moves replies/notes/attachments/watchers)
+- [x] TicketPolicy: 11 policy methods covering all ticket permissions (auto-discovered)
+- [x] Ticket index page: GET /tickets → tickets.index; ListTicketsRequest; TicketController::index(); Pages/Tickets/Index.tsx (debounced search, 5 filter selects, date range, sortable Table with VIP star + tag chips + colored status + priority badges, pagination); Ticket types in index.d.ts
+- [x] Tiptap rich text editor: @tiptap/react + @tiptap/pm + @tiptap/starter-kit + @tiptap/extension-placeholder + @tiptap/extension-link + @tiptap/extension-underline (52 packages); TiptapEditor.tsx (toolbar: Bold/Italic/Underline/Strike/H2/H3/BulletList/OrderedList/Blockquote/Code/CodeBlock); TiptapEditor.css (ProseMirror editor styles + .ticket-body display styles)
+- [x] Request classes: CreateTicketRequest, CreateReplyRequest, CreateNoteRequest, ChangeStatusRequest, ChangePriorityRequest, AssignTicketRequest
+- [x] TicketReplyController::store() + TicketNoteController::store()
+- [x] TicketService extended: addReply (sets first_response_at if null + actor ≠ requester), addNote, changeStatus (auto-sets/clears closed_at), changePriority, assign
+- [x] Ticket model: LogsActivity trait (logOnly status_id/priority/assignee_id/team_id/category_id/subject, logOnlyDirty, dontSubmitEmptyLogs)
+- [x] TicketController fully expanded: create/store/show/changeStatus/changePriority/assign/destroy
+- [x] Routes reorganized into prefix group (tickets.*) with all sub-resources (replies.store, notes.store, status, priority, assign, destroy)
+- [x] Pages/Tickets/Show.tsx: two-column layout; thread (description + interleaved replies/notes by created_at); reply/note tabs with TiptapEditor; sidebar (status/priority/assignee/team selects with immediate router.patch, requester card, activity timeline); delete confirm
+- [x] Pages/Tickets/Create.tsx: subject+description(Tiptap)+priority/category/assignee/team/status/due_at selects, custom fields (text/textarea/select/number/date), VIP checkbox; useForm post('/tickets')
+- [x] types/index.d.ts: TicketReply, TicketNote, ActivityEntry, CustomFieldValue, TicketDetail interfaces added
+- [x] Build: 1343 modules, 0 errors
+
 ## ✅ PHASE 0 COMPLETE — All 17 tasks done
+## ✅ PHASE 1 COMPLETE — All 18 tasks done
 
 ---
 
@@ -106,9 +127,9 @@
 
 | Phase | Tasks | Done | Remaining |
 |---|---|---|---|
-| P0 Setup | 17 | 0 | 17 |
-| P1 Auth | 18 | 0 | 18 |
-| P2 Tickets | 25 | 0 | 25 |
+| P0 Setup | 17 | 17 | 0 |
+| P1 Auth | 18 | 18 | 0 |
+| P2 Tickets | 25 | 12 | 13 |
 | P3 Email | 12 | 0 | 12 |
 | P4 SLA | 11 | 0 | 11 |
 | P5 Automation | 10 | 0 | 10 |
