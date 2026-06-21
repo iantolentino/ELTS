@@ -21,6 +21,23 @@ export interface SharedProps {
     flash: Flash;
 }
 
+export interface PaginationLink {
+    url:    string | null;
+    label:  string;
+    active: boolean;
+}
+
+export interface PaginatedData<T> {
+    data:      T[];
+    links:     PaginationLink[];
+    from:      number;
+    to:        number;
+    total:     number;
+    per_page:  number;
+    current_page: number;
+    last_page: number;
+}
+
 declare module '@inertiajs/core' {
     interface PageProps extends InertiaPageProps, SharedProps {}
 }

@@ -149,14 +149,90 @@
   - Routes (auth+verified): GET/PATCH /profile, PATCH /profile/password
   - Profile/Edit.tsx: avatar click-to-upload with initials fallback, name/email(readonly)/phone/job_title/timezone select/locale select, password change with show/hide toggles, security card with 2FA badge + Manage link
   - Build: 0 errors, 947 modules
-- [ ] P1-10 — Build Admin: User list page (sortable, filterable, paginated)
-- [ ] P1-11 — Build Admin: Create / edit user form (role, team, department assignment)
-- [ ] P1-12 — Build Admin: Agent availability status toggle (Online/Busy/Away/Offline)
-- [ ] P1-13 — Build Admin: Team management page (create, edit, assign agents)
-- [ ] P1-14 — Build Admin: Department management page
-- [ ] P1-15 — Build Admin: Role permissions editor (granular permission matrix UI)
-- [ ] P1-16 — Build login history page (admin view all, user view own)
-- [ ] P1-17 — Build active sessions page with force-logout capability
+- [x] P1-10 — Build Admin: User list page (sortable, filterable, paginated)
+  - Contracts/Repositories/UserRepositoryInterface.php: paginate(search, role, status, sortBy, sortDir, perPage)
+  - Repositories/EloquentUserRepository.php: with(['roles:id,name','team:id,name','department:id,name']), role() scope filter, is_active filter, withQueryString()
+  - Providers/RepositoryServiceProvider.php: binds interface → implementation; registered in bootstrap/providers.php
+  - Services/UserService.php: listUsers(array $params) → sanitizes/defaults all filter params
+  - Policies/UserPolicy.php: viewAny/view → users.view permission; auto-discovered by Laravel
+  - Http/Requests/Admin/ListUsersRequest.php: authorize via Policy, validates search/role/status/sort_by/sort_dir/per_page
+  - Http/Controllers/Admin/UserController.php: index() → Inertia render with transformed paginator, merged filters, role list
+  - Route: GET /admin/users → admin.users.index (auth+verified group)
+  - Pages/Admin/Users/Index.tsx: search (debounced 400ms), role filter, status filter, clear filters, sortable Table with avatar+initials+availability dot+VIP star, role badges, status badge, pagination with per-page selector
+  - Sidebar updated: /users → /admin/users, supervisor role added
+  - Build: 0 errors, 948 modules
+- [x] P1-11 — Build Admin: Create / edit user form (role, team, department assignment)
+  - UserRepositoryInterface: added create(array) and update(User, array) methods
+  - EloquentUserRepository: implemented create() and update() via Eloquent
+  - UserPolicy: added create() → users.create, update() → users.edit
+  - UserService: added createUser() (assigns role via assignRole), updateUser() (syncRoles, skip empty password)
+  - Requests/Admin/CreateUserRequest: name/email(unique)/password(required,confirmed)/phone/job_title/role(Rule::in)/team_id/department_id/timezone/locale/is_active/is_vip
+  - Requests/Admin/UpdateUserRequest: same but password nullable, email Rule::unique ignore self
+  - UserController: create() (Gate::authorize), store(), edit() (Gate::authorize), update() — 5 routes total
+  - lib/constants.ts: shared TIMEZONES array
+  - Pages/Admin/Users/Create.tsx: 3-card form (personal info, account settings, security+access) with Toggle component
+  - Pages/Admin/Users/Edit.tsx: same structure, pre-filled, optional password, email editable
+  - Index.tsx updated: actions column with PencilSquareIcon edit link per row
+  - Build: 0 errors, 950 modules
+- [x] P1-12 — Build Admin: Agent availability status toggle (Online/Busy/Away/Offline)
+  - UpdateAvailabilityRequest: status ∈ [online,busy,away,offline]; authorize=true (any auth user)
+  - AvailabilityController: PATCH /user/availability → userService->updateAvailability(user, status) → back()
+  - UserService::updateAvailability(): delegates to repository update(['availability_status'])
+  - Route: PATCH /user/availability → user.availability.update (auth+verified group)
+  - Topbar.tsx: availability dot on avatar button; dropdown shows 2×2 status grid for staff roles (not clients); router.patch on click with preserveState+preserveScroll
+  - Edit.tsx + UpdateUserRequest + UserController: availability_status added to admin edit form (select: Online/Busy/Away/Offline) so admins can force-set agent status
+  - Build: 0 errors
+- [x] P1-13 — Build Admin: Team management page (create, edit, assign agents)
+  - TeamRepositoryInterface + EloquentTeamRepository: all() (withCount/with department), create/update/delete
+  - RepositoryServiceProvider: TeamRepositoryInterface → EloquentTeamRepository binding added
+  - TeamPolicy: viewAny/create/update/delete → teams.* permissions (auto-discovered)
+  - TeamService: listTeams, createTeam, updateTeam (calls syncMembers), deleteTeam (nulls team_id on members first)
+  - syncMembers: removes users no longer in member list, bulk-updates new members (handles cross-team moves)
+  - CreateTeamRequest (name unique, department_id optional), UpdateTeamRequest (name unique-except-self, member_ids array)
+  - TeamController: index/create/store/edit/update/destroy — 6 routes under /admin/teams
+  - Pages/Admin/Teams/Index.tsx: Table with name/department/members count/status badge/edit link; row click navigates to edit
+  - Pages/Admin/Teams/Create.tsx: name, description, department select, is_active Toggle
+  - Pages/Admin/Teams/Edit.tsx: team details card + members card (searchable checkbox list of agents/supervisors with current-team warning); delete button with confirm
+  - Sidebar: "Users & Teams" split into "Users" + "Teams" (UserGroupIcon); both visible to super_admin/admin/supervisor
+  - Build: 0 errors, 6 routes
+- [x] P1-14 — Build Admin: Department management page
+  - DepartmentRepositoryInterface + EloquentDepartmentRepository: all() (withCount teams+users), create/update/delete
+  - DepartmentPolicy: viewAny/create/update/delete → departments.* permissions (auto-discovered)
+  - DepartmentService: listDepartments, createDepartment, updateDepartment, deleteDepartment (nulls department_id on users+teams before delete)
+  - CreateDepartmentRequest (name unique), UpdateDepartmentRequest (name unique-except-self)
+  - DepartmentController: 6 actions index/create/store/edit/update/destroy under /admin/departments
+  - edit() passes teams in department with users_count (read-only, with link to edit each team)
+  - Pages/Admin/Departments/Index.tsx: Table with name/teams count/users count/status/edit link
+  - Pages/Admin/Departments/Create.tsx: name, description, is_active Toggle
+  - Pages/Admin/Departments/Edit.tsx: details form + read-only teams list (with Edit links) + delete with confirm
+  - RepositoryServiceProvider: DepartmentRepositoryInterface binding added
+  - Sidebar: Departments nav item added (BuildingOffice2Icon, super_admin/admin/supervisor)
+  - Build: 0 errors, 6 routes
+- [x] P1-15 — Build Admin: Role permissions editor (granular permission matrix UI)
+  - RoleService: syncPermissions(Role, array) → role->syncPermissions() + forgetCachedPermissions()
+  - UpdateRolePermissionsRequest: authorize via settings.security permission; validates permissions array (exists:permissions,name)
+  - PermissionsController: index() groups all 60 permissions by module prefix, returns roles/permission_groups/role_permissions; update() blocks super_admin edit (403), calls RoleService::syncPermissions
+  - Routes: GET /admin/permissions → admin.permissions.index; PUT /admin/roles/{roleName}/permissions → admin.roles.permissions.update (defined before other parameterized routes)
+  - Pages/Admin/Permissions/Index.tsx: matrix table; useState (not useForm); per-role Set<string> for local state; dirtyRoles Set tracks unsaved changes; Save button per column (disabled until dirty); super_admin + admin columns show CheckCircleIcon (locked, full access); router.put with preserveState+preserveScroll
+  - Sidebar: KeyIcon import added; "Permissions" nav item at /admin/permissions (super_admin + admin only)
+- [x] P1-16 — Build login history page (admin view all, user view own)
+  - Migration: login_histories (user_id nullable FK, email, ip_address, user_agent, status enum success/failed, created_at; indices on [user_id,created_at] and created_at)
+  - LoginHistory model: UPDATED_AT=null (no updated_at column), user() BelongsTo
+  - LoginHistoryService: record(), forUser(User, limit=50), paginate(filters) — search by email/IP/name, filter by status/date range
+  - AuthService updated: injects LoginHistoryService; records 'failed' (wrong credentials + inactive account) and 'success' on every login attempt
+  - Admin/LoginHistoryController: GET /admin/login-history — abort unless audit.view permission; Pages/Admin/LoginHistory/Index.tsx — debounced search, status/date-from/date-to filters, parseBrowser() UA helper, paginated Table with CheckCircle/XCircle icons
+  - LoginHistoryController: GET /profile/login-history → forUser last 50; Pages/Profile/LoginHistory.tsx — simple list card with back-link
+  - Profile/Edit.tsx: "Login history → View" link added to Security card
+  - types/index.d.ts: PaginatedData<T> and PaginationLink interfaces added (shared generic)
+- [x] P1-17 — Build active sessions page with force-logout capability
+  - SESSION_DRIVER switched to 'database' in .env + .env.example (sessions table already present in Laravel 13 default scaffold)
+  - SessionService: getForUser(), revokeSession(user, sessionId) — user-scoped, revokeOtherSessions(), paginateAll(filters) — admin all authenticated sessions, revokeById() — admin force-logout; uses DB::table('sessions') directly
+  - SessionController (user): GET /profile/sessions (index with is_current flag); DELETE /profile/sessions/others (revokeOtherSessions); DELETE /profile/sessions/{id} (revokeSession — blocks revoking own current)
+  - Admin/SessionController: GET /admin/sessions (audit.view guard, paginated all auth sessions); DELETE /admin/sessions/{id} (blocks revoking own session)
+  - Pages/Profile/Sessions.tsx: device list with parseBrowser+parseOS+timeAgo helpers; TrashIcon per-session revoke; "Sign out of N other sessions" bulk button; current session highlighted with "This device" badge
+  - Pages/Admin/Sessions/Index.tsx: debounced search, per-page selector, 3-column grid per row (user/IP+browser/time); "Force logout" button; current admin session shows "Your session" badge (protected)
+  - Profile/Edit.tsx: "Active sessions → Manage" link added above login history in Security card
+  - Sidebar: DevicePhoneMobileIcon + "Active Sessions" nav item (/admin/sessions) in Developer group (super_admin+admin)
 - [ ] P1-18 — Unit tests: UserService, registration, login, 2FA
 
 ---
@@ -407,5 +483,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-09 — Build user profile page
-- Next task: P1-10 — Build Admin: User list page (sortable, filterable, paginated)
+- Last completed task: P1-17 — Build active sessions page with force-logout capability
+- Next task: P1-18 — Unit tests: UserService, registration, login, 2FA

@@ -15,15 +15,20 @@ use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    /**
-     * Attempt login. Throws ValidationException on failure.
-     * Updates last_login_at and last_login_ip on success.
-     */
+    public function __construct(private readonly LoginHistoryService $loginHistory) {}
+
     public function attempt(LoginRequest $request): User
     {
+        $email     = $request->string('email')->toString();
+        $ip        = $request->ip();
+        $userAgent = $request->userAgent();
+
         if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             $lockoutSeconds = config('ticketing.security.lockout_minutes', 15) * 60;
             RateLimiter::hit($request->throttleKey(), $lockoutSeconds);
+
+            $userId = User::where('email', $email)->value('id');
+            $this->loginHistory->record($email, $ip, $userAgent, $userId, 'failed');
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -35,6 +40,7 @@ class AuthService
 
         if (!$user->is_active) {
             Auth::logout();
+            $this->loginHistory->record($email, $ip, $userAgent, $user->id, 'failed');
             throw ValidationException::withMessages([
                 'email' => __('Your account has been deactivated. Please contact support.'),
             ]);
@@ -44,8 +50,10 @@ class AuthService
 
         $user->update([
             'last_login_at' => now(),
-            'last_login_ip' => $request->ip(),
+            'last_login_ip' => $ip,
         ]);
+
+        $this->loginHistory->record($email, $ip, $userAgent, $user->id, 'success');
 
         return $user;
     }

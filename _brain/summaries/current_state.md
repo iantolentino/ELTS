@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-10 — Build Admin: User list page (sortable, filterable, paginated)
+**Next task:** P1-18 — Unit tests: UserService, registration, login, 2FA
 
 ---
 
@@ -86,6 +86,17 @@
 - [x] Profile page: ProfileController (avatar upload to public disk), PasswordUpdateController; Profile/Edit.tsx (avatar+initials fallback, all fields, password section, security 2FA card)
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
+- [x] Repository layer: Contracts/Repositories/UserRepositoryInterface, Repositories/EloquentUserRepository, Providers/RepositoryServiceProvider (registered in bootstrap/providers.php)
+- [x] Services/UserService: listUsers() with search/role/status/sort/pagination params
+- [x] Policies/UserPolicy: viewAny/view via users.view permission (auto-discovered)
+- [x] Admin user list: GET /admin/users → admin.users.index (auth+verified); ListUsersRequest, Admin/UserController, Pages/Admin/Users/Index.tsx (debounced search, role/status filters, sortable table, pagination, per-page selector)
+- [x] Admin create/edit user: CreateUserRequest, UpdateUserRequest, UserController (create/store/edit/update + Gate::authorize); Create.tsx + Edit.tsx (3-card layout, Toggle component, role/team/dept selects, optional password on edit); lib/constants.ts shared TIMEZONES; UserService createUser/updateUser; repository create/update methods
+- [x] Availability toggle: PATCH /user/availability → AvailabilityController; Topbar updated with availability dot on avatar + 2×2 status grid (staff only); Edit.tsx + admin can force-set agent availability; UserService::updateAvailability()
+- [x] Admin team management: TeamRepositoryInterface + EloquentTeamRepository (withCount/department), TeamPolicy (teams.*), TeamService (syncMembers handles cross-team moves), CreateTeamRequest + UpdateTeamRequest, TeamController (6 routes); Teams Index/Create/Edit.tsx (searchable member checkbox list with current-team warning, delete confirm); Sidebar updated with UserGroupIcon
+- [x] Admin department management: DepartmentRepositoryInterface + EloquentDepartmentRepository (withCount teams+users), DepartmentPolicy (departments.*), DepartmentService (deleteDepartment nulls dept on users+teams), DepartmentController (6 routes); Departments Index/Create/Edit.tsx (read-only teams panel, delete confirm); Sidebar updated with BuildingOffice2Icon
+- [x] Role permissions editor: RoleService::syncPermissions() + forgetCachedPermissions(); UpdateRolePermissionsRequest; PermissionsController (groups 60 permissions by module prefix, blocks super_admin edit); Pages/Admin/Permissions/Index.tsx (matrix table, per-role Set<string> state, per-column Save button, super_admin+admin locked with CheckCircleIcon); Sidebar Permissions item (KeyIcon, super_admin+admin only)
+- [x] Login history: login_histories migration (user_id nullable FK, email, ip, user_agent, status enum, created_at only); LoginHistory model; LoginHistoryService (record/forUser/paginate); AuthService updated to record success+failed on every attempt; Admin/LoginHistoryController (audit.view guard, filterable paginated table); LoginHistoryController (user's own last 50); Admin/LoginHistory/Index.tsx + Profile/LoginHistory.tsx; Profile/Edit.tsx security card links to login history; PaginatedData<T> added to types/index.d.ts
+- [x] Active sessions: SESSION_DRIVER=database (.env + .env.example); SessionService (DB::table sessions — getForUser/revokeSession/revokeOtherSessions/paginateAll/revokeById); SessionController (user routes: index, destroy, destroyOthers — all guard own current session); Admin/SessionController (audit.view guard, force-logout any session except own); Profile/Sessions.tsx (parseBrowser+parseOS+timeAgo, bulk revoke button, current session badge, per-session revoke); Admin/Sessions/Index.tsx (debounced search, Force logout button, "Your session" badge); Profile/Edit.tsx security card now has Active Sessions + Login History links; Sidebar: Active Sessions in Developer group
 
 ## ✅ PHASE 0 COMPLETE — All 17 tasks done
 

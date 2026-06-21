@@ -1,5 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController;
+use App\Http\Controllers\Admin\LoginHistoryController as AdminLoginHistoryController;
+use App\Http\Controllers\Admin\PermissionsController as AdminPermissionsController;
+use App\Http\Controllers\Admin\SessionController as AdminSessionController;
+use App\Http\Controllers\Admin\TeamController as AdminTeamController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\AvailabilityController;
+use App\Http\Controllers\LoginHistoryController;
+use App\Http\Controllers\SessionController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PasswordUpdateController;
 use App\Http\Controllers\ProfileController;
@@ -68,7 +77,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile',         [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/password',[PasswordUpdateController::class, 'update'])->name('profile.password.update');
 
+    Route::patch('/user/availability', [AvailabilityController::class, 'update'])->name('user.availability.update');
+    Route::get('/profile/login-history', [LoginHistoryController::class, 'index'])->name('profile.login-history');
+
+    Route::get('/profile/sessions',                      [SessionController::class, 'index'])->name('profile.sessions');
+    Route::delete('/profile/sessions/others',            [SessionController::class, 'destroyOthers'])->name('profile.sessions.destroy-others');
+    Route::delete('/profile/sessions/{sessionId}',       [SessionController::class, 'destroy'])->name('profile.sessions.destroy');
+
     Route::get('/user/two-factor-setup',    [TwoFactorSetupController::class, 'show'])->name('two-factor.setup');
     Route::post('/user/two-factor-setup',   [TwoFactorSetupController::class, 'enable'])->name('two-factor.enable');
     Route::delete('/user/two-factor-setup', [TwoFactorSetupController::class, 'disable'])->name('two-factor.disable');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users',              [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/users/create',       [AdminUserController::class, 'create'])->name('users.create');
+        Route::post('/users',             [AdminUserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit',  [AdminUserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}',       [AdminUserController::class, 'update'])->name('users.update');
+
+        Route::get('/permissions',                          [AdminPermissionsController::class, 'index'])->name('permissions.index');
+        Route::put('/roles/{roleName}/permissions',         [AdminPermissionsController::class, 'update'])->name('roles.permissions.update');
+
+        Route::get('/login-history', [AdminLoginHistoryController::class, 'index'])->name('login-history.index');
+
+        Route::get('/sessions',                      [AdminSessionController::class, 'index'])->name('sessions.index');
+        Route::delete('/sessions/{sessionId}',       [AdminSessionController::class, 'destroy'])->name('sessions.destroy');
+
+        Route::get('/departments',                [AdminDepartmentController::class, 'index'])->name('departments.index');
+        Route::get('/departments/create',         [AdminDepartmentController::class, 'create'])->name('departments.create');
+        Route::post('/departments',               [AdminDepartmentController::class, 'store'])->name('departments.store');
+        Route::get('/departments/{department}/edit',  [AdminDepartmentController::class, 'edit'])->name('departments.edit');
+        Route::put('/departments/{department}',       [AdminDepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/departments/{department}',    [AdminDepartmentController::class, 'destroy'])->name('departments.destroy');
+
+        Route::get('/teams',                [AdminTeamController::class, 'index'])->name('teams.index');
+        Route::get('/teams/create',         [AdminTeamController::class, 'create'])->name('teams.create');
+        Route::post('/teams',               [AdminTeamController::class, 'store'])->name('teams.store');
+        Route::get('/teams/{team}/edit',    [AdminTeamController::class, 'edit'])->name('teams.edit');
+        Route::put('/teams/{team}',         [AdminTeamController::class, 'update'])->name('teams.update');
+        Route::delete('/teams/{team}',      [AdminTeamController::class, 'destroy'])->name('teams.destroy');
+    });
 });

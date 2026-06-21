@@ -5,10 +5,14 @@ import {
     ChartBarIcon,
     BookOpenIcon,
     UsersIcon,
+    UserGroupIcon,
+    BuildingOffice2Icon,
     ComputerDesktopIcon,
     Cog6ToothIcon,
     CodeBracketIcon,
     ClipboardDocumentListIcon,
+    KeyIcon,
+    DevicePhoneMobileIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -50,16 +54,20 @@ const navigation: NavGroup[] = [
     {
         group: 'Administration',
         items: [
-            { label: 'Users & Teams', href: '/users', icon: UsersIcon, roles: ['super_admin', 'admin'] },
-            { label: 'Assets', href: '/assets', icon: ComputerDesktopIcon, roles: ['super_admin', 'admin', 'agent'] },
-            { label: 'Settings', href: '/settings', icon: Cog6ToothIcon, roles: ['super_admin', 'admin'] },
+            { label: 'Users',         href: '/admin/users',        icon: UsersIcon,           roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Teams',         href: '/admin/teams',        icon: UserGroupIcon,       roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Departments',   href: '/admin/departments',  icon: BuildingOffice2Icon, roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Permissions',   href: '/admin/permissions',  icon: KeyIcon,             roles: ['super_admin', 'admin'] },
+            { label: 'Assets',        href: '/assets',             icon: ComputerDesktopIcon, roles: ['super_admin', 'admin', 'agent'] },
+            { label: 'Settings',      href: '/settings',           icon: Cog6ToothIcon,       roles: ['super_admin', 'admin'] },
         ],
     },
     {
         group: 'Developer',
         items: [
-            { label: 'API & Webhooks', href: '/api', icon: CodeBracketIcon, roles: ['super_admin', 'admin'] },
-            { label: 'Audit Logs', href: '/audit', icon: ClipboardDocumentListIcon, roles: ['super_admin', 'admin'] },
+            { label: 'Active Sessions', href: '/admin/sessions',    icon: DevicePhoneMobileIcon,    roles: ['super_admin', 'admin'] },
+            { label: 'API & Webhooks',  href: '/api',               icon: CodeBracketIcon,           roles: ['super_admin', 'admin'] },
+            { label: 'Audit Logs',      href: '/audit',             icon: ClipboardDocumentListIcon, roles: ['super_admin', 'admin'] },
         ],
     },
 ];

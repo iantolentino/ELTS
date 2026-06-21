@@ -263,6 +263,32 @@ export default function ProfileEdit({ profileUser }: Props) {
                             </Link>
                         </div>
                     </div>
+
+                    <div className="mt-4 pt-4 border-t border-[--color-border] flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-[--color-text]">Active sessions</p>
+                            <p className="text-xs text-[--color-text-muted]">View and revoke devices signed into your account.</p>
+                        </div>
+                        <Link
+                            href="/profile/sessions"
+                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                            Manage →
+                        </Link>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-[--color-border] flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-[--color-text]">Login history</p>
+                            <p className="text-xs text-[--color-text-muted]">Review recent sign-in activity on your account.</p>
+                        </div>
+                        <Link
+                            href="/profile/login-history"
+                            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                            View →
+                        </Link>
+                    </div>
                 </Card>
             </div>
         </AppLayout>
