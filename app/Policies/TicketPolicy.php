@@ -88,6 +88,11 @@ class TicketPolicy
         return $user->hasPermissionTo('tickets.change_priority');
     }
 
+    public function watch(User $user, Ticket $ticket): bool
+    {
+        return $this->view($user, $ticket);
+    }
+
     public function export(User $user): bool
     {
         return $user->hasPermissionTo('tickets.export');

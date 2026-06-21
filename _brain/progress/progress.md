@@ -308,7 +308,14 @@
   - Pages/Admin/Tags/Index.tsx: create form with 8 preset color swatches + custom color input + live preview chip; inline edit rows (click pencil → editable row with save/cancel); delete with confirm
   - Sidebar: Tags nav item (TagIcon, supervisor/admin/super_admin)
   - Build: 0 errors
-- [ ] P2-14 — Build ticket watcher subscribe/unsubscribe
+- [x] P2-14 — Build ticket watcher subscribe/unsubscribe
+  - TicketPolicy::watch() — delegates to view() (any viewer can watch)
+  - TicketService: addWatcher (firstOrCreate), removeWatcher (delete by ticket+user)
+  - TicketWatcherController: store (POST /tickets/{ticket}/watch) + destroy (DELETE) with Gate::authorize watch
+  - Routes: POST/DELETE /tickets/{ticket}/watch → tickets.watch / tickets.unwatch
+  - TicketController::show(): passes is_watching flag (contains user_id check) + can.watch
+  - Show.tsx: Watchers sidebar card — Watch/Unwatch button (BellIcon/BellSlashIcon toggle), watcher avatar initials grid with name tooltip
+  - Build: 0 errors
 - [ ] P2-15 — Build bulk actions: select multiple tickets → assign / close / change status / tag / delete
 - [ ] P2-16 — Build ticket merge UI (select target ticket, confirm, preserve thread)
 - [ ] P2-17 — Build parent-child ticket linking UI
@@ -538,5 +545,5 @@
 
 ## CURRENT STATUS
 - Phase: 2 — IN PROGRESS
-- Last completed task: P2-13 — Tag management: add/remove + admin CRUD with color picker
-- Next task: P2-14 — Ticket watcher subscribe/unsubscribe
+- Last completed task: P2-14 — Ticket watcher subscribe/unsubscribe
+- Next task: P2-15 — Bulk actions: select multiple tickets → assign / close / change status / tag / delete

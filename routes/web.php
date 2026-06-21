@@ -4,6 +4,7 @@ use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
 use App\Http\Controllers\Tickets\TicketTagController;
+use App\Http\Controllers\Tickets\TicketWatcherController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
 use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController;
 use App\Http\Controllers\Admin\LoginHistoryController as AdminLoginHistoryController;
@@ -91,6 +92,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{ticket}/notes',                         [TicketNoteController::class, 'store'])->name('notes.store');
         Route::post('/{ticket}/tags',                          [TicketTagController::class, 'store'])->name('tags.store');
         Route::delete('/{ticket}/tags/{tag}',                  [TicketTagController::class, 'destroy'])->name('tags.destroy');
+        Route::post('/{ticket}/watch',                         [TicketWatcherController::class, 'store'])->name('watch');
+        Route::delete('/{ticket}/watch',                       [TicketWatcherController::class, 'destroy'])->name('unwatch');
     });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');

@@ -134,6 +134,21 @@ class TicketService
         ]);
     }
 
+    public function addWatcher(Ticket $ticket, int $userId): void
+    {
+        TicketWatcher::firstOrCreate([
+            'ticket_id' => $ticket->id,
+            'user_id'   => $userId,
+        ]);
+    }
+
+    public function removeWatcher(Ticket $ticket, int $userId): void
+    {
+        TicketWatcher::where('ticket_id', $ticket->id)
+            ->where('user_id', $userId)
+            ->delete();
+    }
+
     public function addTag(Ticket $ticket, int $tagId): void
     {
         $ticket->tags()->syncWithoutDetaching([$tagId]);

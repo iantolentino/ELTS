@@ -138,7 +138,8 @@ class TicketController extends Controller
                 'assignee'          => $ticket->assignee ? ['id' => $ticket->assignee->id, 'name' => $ticket->assignee->name, 'avatar_url' => $avatarUrl($ticket->assignee)] : null,
                 'team'              => $ticket->team ? ['id' => $ticket->team->id, 'name' => $ticket->team->name] : null,
                 'tags'              => $ticket->tags->map(fn ($tag) => ['id' => $tag->id, 'name' => $tag->name, 'color' => $tag->color])->all(),
-                'watchers'          => $ticket->watchers->map(fn ($w) => ['id' => $w->user?->id, 'name' => $w->user?->name])->filter(fn ($w) => $w['id'])->values()->all(),
+                'watchers'          => $ticket->watchers->map(fn ($w) => ['id' => $w->user?->id, 'name' => $w->user?->name ?? 'Deleted User'])->filter(fn ($w) => $w['id'])->values()->all(),
+                'is_watching'       => $ticket->watchers->contains('user_id', $user->id),
                 'replies'           => $ticket->replies->map(fn ($r) => [
                     'id'         => $r->id,
                     'user'       => ['id' => $r->user?->id, 'name' => $r->user?->name ?? 'Deleted User', 'avatar_url' => $avatarUrl($r->user)],
@@ -167,6 +168,7 @@ class TicketController extends Controller
                 'change_status'   => $user->can('changeStatus', Ticket::class),
                 'change_priority' => $user->can('changePriority', Ticket::class),
                 'update'          => $user->can('update', $ticket),
+                'watch'           => $user->can('watch', $ticket),
                 'delete'          => $user->can('delete', $ticket),
             ],
             'statuses' => TicketStatus::orderBy('sort_order')->get(['id', 'name', 'color']),

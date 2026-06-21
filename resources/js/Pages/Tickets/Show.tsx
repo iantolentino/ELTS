@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Badge, Button } from '@/Components/UI';
 import TiptapEditor from '@/Components/editor/TiptapEditor';
 import { ArrowLeftIcon, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon, BellIcon, BellSlashIcon } from '@heroicons/react/24/outline';
 import type { TicketStatus, TicketTag } from '@/types';
 
 interface UserMin { id: number | null; name: string; avatar_url: string | null; email?: string; }
@@ -22,11 +22,12 @@ interface TicketData {
     closed_at: string | null; created_at: string; updated_at: string;
     status: TicketStatus; category: { id: number; name: string } | null;
     requester: UserMin; assignee: UserMin | null; team: TeamMin | null;
-    tags: TicketTag[]; watchers: UserMin[]; replies: TicketReplyData[];
-    notes: TicketNoteData[]; activity: ActivityEntry[]; custom_field_values: CFValue[];
+    tags: TicketTag[]; watchers: UserMin[]; is_watching: boolean;
+    replies: TicketReplyData[]; notes: TicketNoteData[];
+    activity: ActivityEntry[]; custom_field_values: CFValue[];
 }
 
-interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; update: boolean; delete: boolean; }
+interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; update: boolean; watch: boolean; delete: boolean; }
 
 interface Props {
     ticket:   TicketData;
@@ -283,6 +284,38 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                                 <p>Updated <span className="text-[--color-text]">{ticket.updated_at}</span></p>
                                 {ticket.due_at && <p>Due <span className="text-danger-600 font-medium">{ticket.due_at}</span></p>}
                             </div>
+                        </div>
+
+                        {/* Watchers */}
+                        <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Watchers</label>
+                                {can.watch && (
+                                    ticket.is_watching ? (
+                                        <button onClick={() => router.delete(`/tickets/${ticket.id}/watch`, { preserveScroll: true })}
+                                            className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors">
+                                            <BellSlashIcon className="w-3.5 h-3.5" /> Unwatch
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => router.post(`/tickets/${ticket.id}/watch`, {}, { preserveScroll: true })}
+                                            className="flex items-center gap-1 text-xs text-[--color-text-muted] hover:text-primary-600 font-medium transition-colors">
+                                            <BellIcon className="w-3.5 h-3.5" /> Watch
+                                        </button>
+                                    )
+                                )}
+                            </div>
+                            {ticket.watchers.length === 0 ? (
+                                <p className="text-xs text-[--color-text-muted] italic">No watchers yet.</p>
+                            ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {ticket.watchers.map(w => (
+                                        <span key={w.id} title={w.name}
+                                            className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-bold cursor-default">
+                                            {initials(w.name)}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Activity */}
