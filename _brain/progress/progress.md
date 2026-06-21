@@ -83,7 +83,13 @@
 ## PHASE 1 — AUTHENTICATION & USER MANAGEMENT
 **Goal:** All roles can log in, register (clients), and manage their accounts.
 
-- [ ] P1-01 — Create `users` table migration with all fields (name, email, password, role, availability_status, is_vip, 2fa_secret, etc.)
+- [x] P1-01 — Create `users` table migration with all fields (name, email, password, role, availability_status, is_vip, 2fa_secret, etc.)
+  - Created: 2026_06_21_100000_add_elts_fields_to_users_table.php (ALTER TABLE migration)
+  - Adds 14 ELTS-specific columns: phone, avatar, job_title, timezone, locale, availability_status, is_vip, is_active, two_factor_secret, two_factor_confirmed_at, last_login_at, last_login_ip, team_id, department_id
+  - Indices: availability_status, is_active, team_id, department_id
+  - FK constraints for team_id/department_id deferred to P1-02 (teams/departments table not yet created)
+  - User model updated: MustVerifyEmail added, all fields in $fillable, is_active + last_login_at casts added
+  - Migration verified: all 22 columns present in users table
 - [ ] P1-02 — Create `teams` and `departments` table migrations
 - [ ] P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
 - [ ] P1-04 — Build login page (AuthLayout, email + password form, remember me)
@@ -349,6 +355,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 0 — IN PROGRESS
-- Last completed task: P0-17 — Set up config/ticketing.php ✅ PHASE 0 COMPLETE
-- Next task: P1-01 — Create users table migration with all fields
+- Phase: 1 — IN PROGRESS
+- Last completed task: P1-01 — Create users table migration with all fields
+- Next task: P1-02 — Create teams and departments table migrations

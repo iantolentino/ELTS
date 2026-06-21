@@ -6,8 +6,8 @@
 ## STATE: EXECUTION_MODE — PHASE 0 COMPLETE, PHASE 1 IN PROGRESS
 
 **Last updated:** 2026-06-21
-**Current phase:** Phase 1 — Authentication & User Management (STARTING)
-**Next task:** P1-01 — Create users table migration with all fields
+**Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
+**Next task:** P1-02 — Create teams and departments table migrations
 
 ---
 
@@ -71,6 +71,8 @@
 - [x] Layouts created: AppLayout.tsx (sidebar+topbar+flash), Sidebar.tsx (role-filtered nav), Topbar.tsx (search+notifications+user menu), AuthLayout.tsx (centered card)
 - [x] UI components: Button, Input, Badge, Card, Modal, Dropdown, Table — all typed, barrel-exported from Components/UI/index.ts
 - [x] Database migrated: users, cache, jobs, job_batches, failed_jobs, permissions, roles, activity_log — all tables created in elts_db
+- [x] users table extended: 14 ELTS columns added (phone, avatar, job_title, timezone, locale, availability_status, is_vip, is_active, two_factor_secret, two_factor_confirmed_at, last_login_at, last_login_ip, team_id, department_id)
+- [x] User model updated: MustVerifyEmail, all new fields in $fillable and casts
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 
