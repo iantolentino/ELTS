@@ -97,7 +97,12 @@
   - Models created: app/Models/Department.php, app/Models/Team.php (with relationships)
   - User model updated: team() and department() BelongsTo relationships added
   - All 3 migrations applied successfully
-- [ ] P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
+- [x] P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
+  - Created: database/seeders/RolesAndPermissionsSeeder.php
+  - 60 permissions across 10 modules: tickets(13), users(5), teams(4), departments(4), sla(4), automation(2), reports(3), kb(5), assets(5), audit(2), settings(6), canned_responses(3), notifications(2), api(2)
+  - 5 roles created: super_admin(60), admin(60), supervisor(30), agent(15), client(7)
+  - DatabaseSeeder updated to call RolesAndPermissionsSeeder first
+  - Seeder is idempotent via firstOrCreate + syncPermissions
 - [ ] P1-04 — Build login page (AuthLayout, email + password form, remember me)
 - [ ] P1-05 — Build client registration page with email verification
 - [ ] P1-06 — Build forgot password / reset password flow
@@ -362,5 +367,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-02 — Create teams and departments table migrations
-- Next task: P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
+- Last completed task: P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
+- Next task: P1-04 — Build login page (AuthLayout, email + password form, remember me)

@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
+**Next task:** P1-04 — Build login page (AuthLayout, email + password form, remember me)
 
 ---
 
@@ -77,6 +77,7 @@
 - [x] teams table: name, description, department_id (FK), is_active
 - [x] users.team_id and users.department_id FK constraints wired (nullOnDelete)
 - [x] Models created: Department.php, Team.php with relationships; User.php updated with team()/department() BelongsTo
+- [x] RolesAndPermissionsSeeder: 60 permissions, 5 roles (super_admin/admin/supervisor/agent/client) seeded and verified in DB
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 
