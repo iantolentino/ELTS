@@ -16,17 +16,67 @@
 - [x] P0-04 — Install and configure Tailwind CSS with custom design tokens (colors, fonts)
 - [x] P0-05 — Install spatie/laravel-permission and publish config
 - [x] P0-06 — Install spatie/laravel-activitylog and publish config
-- [ ] P0-07 — Install barryvdh/laravel-dompdf
-- [ ] P0-08 — Install maatwebsite/excel
-- [ ] P0-09 — Install webklex/laravel-imap
-- [ ] P0-10 — Install pragmarx/google2fa-laravel for TOTP 2FA
-- [ ] P0-11 — Install knuckleswtf/scribe for API docs
-- [ ] P0-12 — Install Pest PHP testing framework
-- [ ] P0-13 — Create base AppLayout.tsx and AuthLayout.tsx with sidebar + topbar
-- [ ] P0-14 — Create base UI component library: Button, Input, Modal, Badge, Dropdown, Table, Card
-- [ ] P0-15 — Set up queue database tables (`php artisan queue:table`)
-- [ ] P0-16 — Configure cPanel cron job for Laravel Scheduler (every minute)
-- [ ] P0-17 — Set up `config/ticketing.php` with app-wide defaults
+- [x] P0-07 — Install barryvdh/laravel-dompdf
+  - Installed: barryvdh/laravel-dompdf v3.1.2 (dompdf/dompdf v3.1.5)
+  - Config published to config/dompdf.php, enable_font_subsetting set to true
+  - storage/fonts/ directory created with .gitkeep; font cache files gitignored
+- [x] P0-08 — Install maatwebsite/excel
+  - Installed: maatwebsite/excel v3.1.69 (phpoffice/phpspreadsheet v1.30.5)
+  - Config published to config/excel.php
+  - PDF driver set to DOMPDF (already installed), export properties seeded with APP_NAME
+- [x] P0-09 — Install webklex/laravel-imap
+  - Installed: webklex/laravel-imap v6.2.0 (webklex/php-imap v6.2.0)
+  - Config published to config/imap.php; soft_fail set to true (resilient polling)
+  - IMAP env keys added to .env and .env.example (IMAP_HOST, PORT, ENCRYPTION, USERNAME, PASSWORD)
+- [x] P0-10 — Install pragmarx/google2fa-laravel for TOTP 2FA
+  - Installed: pragmarx/google2fa-laravel v3.0.1 + pragmarx/google2fa v8.0.3
+  - Also installed: bacon/bacon-qr-code v3.1.1 (SVG QR code backend)
+  - Config published to config/google2fa.php; otp_secret_column → two_factor_secret, forbid_old_passwords → true
+  - OTP env keys added to .env and .env.example
+- [x] P0-11 — Install knuckleswtf/scribe for API docs
+  - Installed: knuckleswtf/scribe v5.11.0 (dev dependency)
+  - Config published to config/scribe.php
+  - Auth: Bearer token enabled + default=true (all endpoints authenticated by default)
+  - Example languages: bash, javascript, php, python
+  - ELTS description + intro text configured; SCRIBE_AUTH_KEY env key added
+- [x] P0-12 — Install Pest PHP testing framework
+  - Installed: pestphp/pest v4.7.3 + pestphp/pest-plugin-laravel v4.1.0
+  - phpunit downgraded one patch: 12.5.30 → 12.5.29 (required for pest v4.7.3 compatibility)
+  - Created tests/Pest.php: Feature tests use TestCase + RefreshDatabase; actingAsRole() helper defined
+  - Example tests converted to Pest syntax; 2/2 tests pass
+- [x] P0-13 — Create base AppLayout.tsx and AuthLayout.tsx with sidebar + topbar
+  - Installed: @heroicons/react (Heroicons v2 for sidebar + topbar icons)
+  - Created: Layouts/AppLayout.tsx — sidebar + topbar shell, flash toast, localStorage sidebar-collapsed state
+  - Created: Layouts/Sidebar.tsx — role-filtered nav groups, collapsed/expanded modes, availability dot
+  - Created: Layouts/Topbar.tsx — search input, notifications bell, user dropdown (profile, security, sign out)
+  - Created: Layouts/AuthLayout.tsx — centered card with logo, flash toast, copyright footer
+  - Build: 601 modules, 0 errors
+- [x] P0-14 — Create base UI component library: Button, Input, Modal, Badge, Dropdown, Table, Card
+  - Components/UI/Button.tsx — 4 variants (primary/secondary/danger/ghost), 3 sizes, loading spinner
+  - Components/UI/Input.tsx — label, error, hint, prefix/suffix icon, forwardRef
+  - Components/UI/Badge.tsx — 6 variants + priority shorthand (critical/high/medium/low) with dot
+  - Components/UI/Card.tsx — optional header/footer slots, padding toggle
+  - Components/UI/Modal.tsx — portal, ESC key, backdrop click, body scroll lock, 4 sizes
+  - Components/UI/Dropdown.tsx — outside-click close, separator support, danger items, align + width props
+  - Components/UI/Table.tsx — generic <T>, sortable headers, loading/empty states, row click
+  - Components/UI/index.ts — barrel export for all components
+  - Build: 0 errors
+- [x] P0-15 — Set up queue database tables (`php artisan queue:table`)
+  - Laravel 13 default migration already includes: jobs, job_batches, failed_jobs (0001_01_01_000002)
+  - Ran php artisan migrate: all 7 migrations applied successfully to elts_db
+  - Tables now in DB: users, cache, jobs, job_batches, failed_jobs, permissions, roles, activity_log
+  - Queue driver confirmed: database (QUEUE_CONNECTION=database in .env)
+- [x] P0-16 — Configure cPanel cron job for Laravel Scheduler (every minute)
+  - routes/console.php updated: activitylog:clean scheduled daily; Phase 3–7 jobs stubbed as comments
+  - php artisan schedule:list confirms: activitylog:clean registered (0 0 * * *)
+  - deployment.md Step 5 updated: scheduler cron + queue:work cron (--stop-when-empty --max-time=55 --tries=3)
+  - new-machine-setup.md updated: queue:work added to daily workflow (terminal 3)
+  - Note: cPanel cron is configured at deploy time (Phase 17) — documented, not yet active
+- [x] P0-17 — Set up `config/ticketing.php` with app-wide defaults
+  - Created config/ticketing.php: 8 sections — tickets, sla, email, satisfaction, security, portal, kb, pagination
+  - All values env()-backed so they can be pre-configured without a DB row
+  - Env keys added to .env and .env.example (ticket, SLA, CSAT/NPS, security, portal settings)
+  - Verified: config('ticketing.tickets.number_prefix') = "TKT" ✓
 
 ---
 
@@ -299,6 +349,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 0 — NOT STARTED
-- Last completed task: None
-- Next task: P0-01
+- Phase: 0 — IN PROGRESS
+- Last completed task: P0-17 — Set up config/ticketing.php ✅ PHASE 0 COMPLETE
+- Next task: P1-01 — Create users table migration with all fields

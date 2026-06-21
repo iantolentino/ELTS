@@ -173,10 +173,14 @@ npm install
 # 4. Run any new migrations
 php artisan migrate
 
-# 5. Start dev servers
-php artisan serve    # terminal 1
-npm run dev          # terminal 2
+# 5. Start dev servers (open 3 terminals)
+php artisan serve         # terminal 1 — Laravel app
+npm run dev               # terminal 2 — Vite HMR
+php artisan queue:work    # terminal 3 — Queue worker (processes background jobs)
 ```
+
+> The queue worker (terminal 3) is needed once Phase 3+ is active (email, SLA, automation, reports all use queued jobs).
+> Run `php artisan schedule:run` manually to test scheduled tasks locally — no cron needed in dev.
 
 ---
 

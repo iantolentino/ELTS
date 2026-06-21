@@ -103,17 +103,25 @@ php artisan view:cache
 ```
 
 ### Step 5 — Configure Cron Jobs in cPanel
-Add these two cron jobs (every minute):
+Go to cPanel → Cron Jobs. Add these two entries (both every minute `* * * * *`).
 
-**Laravel Scheduler:**
+Replace `/home/user/ticketing` with your actual server path (find it with `pwd` in SSH).
+Verify PHP path with: `which php` — common values: `/usr/local/bin/php`, `/usr/bin/php`.
+
+**Cron 1 — Laravel Scheduler** (runs all scheduled tasks):
 ```
 * * * * * /usr/local/bin/php /home/user/ticketing/artisan schedule:run >> /dev/null 2>&1
 ```
 
-**Queue Worker (cPanel fallback — no daemon):**
+**Cron 2 — Queue Worker** (processes background jobs, cPanel-compatible — no daemon):
 ```
-* * * * * /usr/local/bin/php /home/user/ticketing/artisan queue:work --stop-when-empty --queue=emails,sla,automation,reports >> /dev/null 2>&1
+* * * * * /usr/local/bin/php /home/user/ticketing/artisan queue:work --stop-when-empty --max-time=55 --tries=3 --queue=default,emails,sla,automation,reports >> /dev/null 2>&1
 ```
+
+> `--stop-when-empty` — exits once the queue is drained (safe to call every minute)
+> `--max-time=55` — hard stops after 55 seconds so it finishes before the next cron fires
+> `--tries=3` — retries failed jobs up to 3 times before moving to `failed_jobs`
+> Queue priority order: `default → emails → sla → automation → reports`
 
 ### Step 6 — Set File Permissions
 ```bash

@@ -3,11 +3,11 @@
 
 ---
 
-## STATE: SYSTEM_GENERATION COMPLETE — READY FOR EXECUTION_MODE
+## STATE: EXECUTION_MODE — PHASE 0 COMPLETE, PHASE 1 IN PROGRESS
 
 **Last updated:** 2026-06-21
-**Current phase:** Phase 0 — Project Setup (IN PROGRESS)
-**Next task:** P0-07 — Install barryvdh/laravel-dompdf
+**Current phase:** Phase 1 — Authentication & User Management (STARTING)
+**Next task:** P1-01 — Create users table migration with all fields
 
 ---
 
@@ -61,6 +61,20 @@
 - [x] `resources/js/types/global.d.ts` — Window.axios typed
 - [x] `resources/js/Pages/Welcome.tsx` — placeholder page
 - [x] Build verified: npm run build passes (303ms)
+- [x] barryvdh/laravel-dompdf v3.1.2 installed, config published to config/dompdf.php
+- [x] storage/fonts/ directory created for DomPDF font cache
+- [x] maatwebsite/excel v3.1.69 installed, config published to config/excel.php (PDF driver → DOMPDF)
+- [x] webklex/laravel-imap v6.2.0 installed, config published to config/imap.php (soft_fail=true)
+- [x] pragmarx/google2fa-laravel v3.0.1 installed + bacon/bacon-qr-code v3.1.1 (SVG QR codes)
+- [x] knuckleswtf/scribe v5.11.0 installed (dev), config published to config/scribe.php
+- [x] pestphp/pest v4.7.3 + pest-plugin-laravel v4.1.0 installed; tests/Pest.php created; 2/2 tests pass
+- [x] Layouts created: AppLayout.tsx (sidebar+topbar+flash), Sidebar.tsx (role-filtered nav), Topbar.tsx (search+notifications+user menu), AuthLayout.tsx (centered card)
+- [x] UI components: Button, Input, Badge, Card, Modal, Dropdown, Table — all typed, barrel-exported from Components/UI/index.ts
+- [x] Database migrated: users, cache, jobs, job_batches, failed_jobs, permissions, roles, activity_log — all tables created in elts_db
+- [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
+- [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
+
+## ✅ PHASE 0 COMPLETE — All 17 tasks done
 
 ---
 

@@ -25,6 +25,12 @@
 .DS_Store
 Thumbs.db
 
+# DomPDF font cache
+/storage/fonts/*.afm
+/storage/fonts/*.ufm
+/storage/fonts/*.php
+/storage/fonts/*.t1
+
 # Logs
 /storage/logs/*.log
 npm-debug.log
