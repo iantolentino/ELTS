@@ -103,7 +103,12 @@
   - 5 roles created: super_admin(60), admin(60), supervisor(30), agent(15), client(7)
   - DatabaseSeeder updated to call RolesAndPermissionsSeeder first
   - Seeder is idempotent via firstOrCreate + syncPermissions
-- [ ] P1-04 — Build login page (AuthLayout, email + password form, remember me)
+- [x] P1-04 — Build login page (AuthLayout, email + password form, remember me)
+  - Backend: LoginRequest (validation + rate limiting using ticketing.security config), AuthService (attempt, redirectPath, logout), AuthController (showLogin, login, logout)
+  - Routes: GET / and GET /login → showLogin (guest), POST /login → login (guest), POST /logout → logout (auth), GET /dashboard → placeholder (auth)
+  - Frontend: Pages/Auth/Login.tsx — email field, password with show/hide toggle, remember me checkbox, forgot password link, register link
+  - Pages/Dashboard/Index.tsx — placeholder for post-login redirect (real dashboard in Phase 7)
+  - Build: 0 errors, 940 modules, Login-*.js 8.53 kB
 - [ ] P1-05 — Build client registration page with email verification
 - [ ] P1-06 — Build forgot password / reset password flow
 - [ ] P1-07 — Build 2FA setup page (QR code, TOTP verification)
@@ -367,5 +372,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
-- Next task: P1-04 — Build login page (AuthLayout, email + password form, remember me)
+- Last completed task: P1-04 — Build login page
+- Next task: P1-05 — Build client registration page with email verification
