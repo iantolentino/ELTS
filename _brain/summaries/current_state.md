@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 0 — Project Setup (IN PROGRESS)
-**Next task:** P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
+**Next task:** P0-06 — Install spatie/laravel-activitylog and publish config
 
 ---
 
@@ -52,6 +52,15 @@
 - [x] `resources/views/app.blade.php` root template created (Vite + Inertia directives)
 - [x] Shared props wired: auth.user, flash.success, flash.error
 - [x] `routes/web.php` updated to use Inertia::render()
+- [x] React 18 + TypeScript + @vitejs/plugin-react + axios installed
+- [x] `tsconfig.json` created (strict mode, path alias @/* → resources/js/*)
+- [x] `vite.config.js` updated — React plugin, entry point changed to app.tsx
+- [x] `resources/js/app.tsx` — Inertia createInertiaApp wired up
+- [x] `resources/js/bootstrap.ts` — axios configured
+- [x] `resources/js/types/index.d.ts` — shared props typed (AuthUser, Flash, SharedProps)
+- [x] `resources/js/types/global.d.ts` — Window.axios typed
+- [x] `resources/js/Pages/Welcome.tsx` — placeholder page
+- [x] Build verified: npm run build passes (303ms)
 
 ---
 

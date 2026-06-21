@@ -12,9 +12,9 @@
   - DB_CONNECTION=mysql, DB_DATABASE=elts_db configured in .env and .env.example
   - Note: PHP zip + fileinfo extensions enabled in Laragon php.ini
 - [x] P0-02 — Install and configure Inertia.js (server-side adapter)
-- [ ] P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
-- [ ] P0-04 — Install and configure Tailwind CSS with custom design tokens (colors, fonts)
-- [ ] P0-05 — Install spatie/laravel-permission and publish config
+- [x] P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
+- [x] P0-04 — Install and configure Tailwind CSS with custom design tokens (colors, fonts)
+- [x] P0-05 — Install spatie/laravel-permission and publish config
 - [ ] P0-06 — Install spatie/laravel-activitylog and publish config
 - [ ] P0-07 — Install barryvdh/laravel-dompdf
 - [ ] P0-08 — Install maatwebsite/excel
