@@ -13,6 +13,7 @@ import {
     ClipboardDocumentListIcon,
     KeyIcon,
     DevicePhoneMobileIcon,
+    TagIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -57,6 +58,7 @@ const navigation: NavGroup[] = [
             { label: 'Users',         href: '/admin/users',        icon: UsersIcon,           roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Teams',         href: '/admin/teams',        icon: UserGroupIcon,       roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Departments',   href: '/admin/departments',  icon: BuildingOffice2Icon, roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Tags',          href: '/admin/tags',         icon: TagIcon,             roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Permissions',   href: '/admin/permissions',  icon: KeyIcon,             roles: ['super_admin', 'admin'] },
             { label: 'Assets',        href: '/assets',             icon: ComputerDesktopIcon, roles: ['super_admin', 'admin', 'agent'] },
             { label: 'Settings',      href: '/settings',           icon: Cog6ToothIcon,       roles: ['super_admin', 'admin'] },

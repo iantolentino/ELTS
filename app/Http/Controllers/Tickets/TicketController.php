@@ -15,6 +15,7 @@ use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\TicketStatus;
 use App\Models\Team;
+use App\Models\TicketTag;
 use App\Models\User;
 use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
@@ -165,11 +166,13 @@ class TicketController extends Controller
                 'assign'          => $user->can('assign', Ticket::class),
                 'change_status'   => $user->can('changeStatus', Ticket::class),
                 'change_priority' => $user->can('changePriority', Ticket::class),
+                'update'          => $user->can('update', $ticket),
                 'delete'          => $user->can('delete', $ticket),
             ],
             'statuses' => TicketStatus::orderBy('sort_order')->get(['id', 'name', 'color']),
             'agents'   => User::role(['super_admin', 'admin', 'supervisor', 'agent'])->orderBy('name')->get(['id', 'name']),
             'teams'    => Team::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'allTags'  => TicketTag::orderBy('name')->get(['id', 'name', 'color']),
         ]);
     }
 

@@ -3,6 +3,8 @@
 use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
+use App\Http\Controllers\Tickets\TicketTagController;
+use App\Http\Controllers\Admin\TagController as AdminTagController;
 use App\Http\Controllers\Admin\DepartmentController as AdminDepartmentController;
 use App\Http\Controllers\Admin\LoginHistoryController as AdminLoginHistoryController;
 use App\Http\Controllers\Admin\PermissionsController as AdminPermissionsController;
@@ -87,6 +89,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/{ticket}/assign',                       [TicketController::class, 'assign'])->name('assign');
         Route::post('/{ticket}/replies',                       [TicketReplyController::class, 'store'])->name('replies.store');
         Route::post('/{ticket}/notes',                         [TicketNoteController::class, 'store'])->name('notes.store');
+        Route::post('/{ticket}/tags',                          [TicketTagController::class, 'store'])->name('tags.store');
+        Route::delete('/{ticket}/tags/{tag}',                  [TicketTagController::class, 'destroy'])->name('tags.destroy');
     });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
@@ -125,6 +129,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/departments/{department}/edit',  [AdminDepartmentController::class, 'edit'])->name('departments.edit');
         Route::put('/departments/{department}',       [AdminDepartmentController::class, 'update'])->name('departments.update');
         Route::delete('/departments/{department}',    [AdminDepartmentController::class, 'destroy'])->name('departments.destroy');
+
+        Route::get('/tags',                 [AdminTagController::class, 'index'])->name('tags.index');
+        Route::post('/tags',                [AdminTagController::class, 'store'])->name('tags.store');
+        Route::put('/tags/{tag}',           [AdminTagController::class, 'update'])->name('tags.update');
+        Route::delete('/tags/{tag}',        [AdminTagController::class, 'destroy'])->name('tags.destroy');
 
         Route::get('/teams',                [AdminTeamController::class, 'index'])->name('teams.index');
         Route::get('/teams/create',         [AdminTeamController::class, 'create'])->name('teams.create');

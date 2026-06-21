@@ -296,7 +296,18 @@
   - Sidebar assignee + team selects in Show.tsx: immediate router.patch to /tickets/{id}/assign
   - TicketController::assign() + AssignTicketRequest validates assignee_id/team_id
   - Build: 1343 modules, 0 errors (Tiptap chunk: 422 kB)
-- [ ] P2-13 — Build tag management: add/remove tags on ticket, tag CRUD in settings
+- [x] P2-13 — Build tag management: add/remove tags on ticket, tag CRUD in settings
+  - TicketService: addTag (syncWithoutDetaching) + removeTag (detach)
+  - AddTagRequest: authorize via update policy, validates tag_id exists
+  - TicketTagController: store (attach) + destroy (detach) → back()
+  - CreateTagRequest + UpdateTagRequest: name unique/unique-except-self, color hex regex
+  - Admin/TagController: index (withCount tickets), store, update, destroy (detach all tickets first)
+  - Routes: POST/DELETE /tickets/{ticket}/tags/{tag}, GET/POST/PUT/DELETE /admin/tags
+  - TicketController::show() now passes allTags + can.update
+  - Show.tsx: TagPicker component — inline chip display with X to remove, dropdown to add (filters already-attached tags); outside-click closes dropdown
+  - Pages/Admin/Tags/Index.tsx: create form with 8 preset color swatches + custom color input + live preview chip; inline edit rows (click pencil → editable row with save/cancel); delete with confirm
+  - Sidebar: Tags nav item (TagIcon, supervisor/admin/super_admin)
+  - Build: 0 errors
 - [ ] P2-14 — Build ticket watcher subscribe/unsubscribe
 - [ ] P2-15 — Build bulk actions: select multiple tickets → assign / close / change status / tag / delete
 - [ ] P2-16 — Build ticket merge UI (select target ticket, confirm, preserve thread)
@@ -527,5 +538,5 @@
 
 ## CURRENT STATUS
 - Phase: 2 — IN PROGRESS
-- Last completed task: P2-12 — Ticket assignment control (assign agent + team in Show sidebar)
-- Next task: P2-13 — Tag management: add/remove tags on ticket, tag CRUD in settings
+- Last completed task: P2-13 — Tag management: add/remove + admin CRUD with color picker
+- Next task: P2-14 — Ticket watcher subscribe/unsubscribe

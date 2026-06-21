@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Badge, Button } from '@/Components/UI';
 import TiptapEditor from '@/Components/editor/TiptapEditor';
 import { ArrowLeftIcon, StarIcon as StarSolid } from '@heroicons/react/24/solid';
-import { LockClosedIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { TicketStatus, TicketTag } from '@/types';
 
 interface UserMin { id: number | null; name: string; avatar_url: string | null; email?: string; }
@@ -26,7 +26,7 @@ interface TicketData {
     notes: TicketNoteData[]; activity: ActivityEntry[]; custom_field_values: CFValue[];
 }
 
-interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; delete: boolean; }
+interface Perms { reply: boolean; note_internal: boolean; assign: boolean; change_status: boolean; change_priority: boolean; update: boolean; delete: boolean; }
 
 interface Props {
     ticket:   TicketData;
@@ -34,12 +34,68 @@ interface Props {
     statuses: TicketStatus[];
     agents:   AgentMin[];
     teams:    TeamMin[];
+    allTags:  TicketTag[];
 }
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 const SELECT_CLS = 'w-full border border-[--color-border] rounded-lg px-3 py-2 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none';
 
-export default function Show({ ticket, can, statuses, agents, teams }: Props) {
+function TagPicker({ ticket, allTags, canUpdate }: { ticket: TicketData; allTags: TicketTag[]; canUpdate: boolean }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const attachedIds = new Set(ticket.tags.map(t => t.id));
+    const available   = allTags.filter(t => !attachedIds.has(t.id));
+
+    const addTag    = (tagId: number) => router.post(`/tickets/${ticket.id}/tags`, { tag_id: tagId }, { preserveScroll: true });
+    const removeTag = (tagId: number) => router.delete(`/tickets/${ticket.id}/tags/${tagId}`, { preserveScroll: true });
+
+    return (
+        <div className="p-4 space-y-2">
+            <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Tags</label>
+            <div className="flex flex-wrap gap-1">
+                {ticket.tags.map(tag => (
+                    <span key={tag.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white" style={{ backgroundColor: tag.color ?? '#6B7280' }}>
+                        {tag.name}
+                        {canUpdate && (
+                            <button onClick={() => removeTag(tag.id)} className="opacity-70 hover:opacity-100 ml-0.5">
+                                <XMarkIcon className="w-3 h-3" />
+                            </button>
+                        )}
+                    </span>
+                ))}
+                {canUpdate && available.length > 0 && (
+                    <div ref={ref} className="relative">
+                        <button onClick={() => setOpen(o => !o)}
+                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-medium border border-dashed border-[--color-border] text-[--color-text-muted] hover:border-primary-400 hover:text-primary-600 transition-colors">
+                            <PlusIcon className="w-3 h-3" /> Add
+                        </button>
+                        {open && (
+                            <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-lg border border-[--color-border] shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
+                                {available.map(tag => (
+                                    <button key={tag.id} onClick={() => { addTag(tag.id); setOpen(false); }}
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-[--color-bg] text-left transition-colors">
+                                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color ?? '#6B7280' }} />
+                                        {tag.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+                {ticket.tags.length === 0 && !canUpdate && <span className="text-xs text-[--color-text-muted] italic">None</span>}
+            </div>
+        </div>
+    );
+}
+
+export default function Show({ ticket, can, statuses, agents, teams, allTags }: Props) {
     const [activeTab, setActiveTab] = useState<'reply' | 'note'>(can.reply ? 'reply' : 'note');
     const [body, setBody] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -209,16 +265,7 @@ export default function Show({ ticket, can, statuses, agents, teams }: Props) {
                                 <p className="text-sm text-[--color-text]">{ticket.category?.name ?? <em className="text-[--color-text-muted]">None</em>}</p>
                             </div>
                             {/* Tags */}
-                            {ticket.tags.length > 0 && (
-                                <div className="p-4 space-y-1.5">
-                                    <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Tags</label>
-                                    <div className="flex flex-wrap gap-1">
-                                        {ticket.tags.map(tag => (
-                                            <span key={tag.id} className="px-2 py-0.5 rounded text-xs font-medium text-white" style={{ backgroundColor: tag.color ?? '#6B7280' }}>{tag.name}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            <TagPicker ticket={ticket} allTags={allTags} canUpdate={can.update} />
                         </div>
 
                         {/* Requester info */}

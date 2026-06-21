@@ -134,6 +134,16 @@ class TicketService
         ]);
     }
 
+    public function addTag(Ticket $ticket, int $tagId): void
+    {
+        $ticket->tags()->syncWithoutDetaching([$tagId]);
+    }
+
+    public function removeTag(Ticket $ticket, int $tagId): void
+    {
+        $ticket->tags()->detach($tagId);
+    }
+
     public function mergeTickets(Ticket $source, Ticket $target, User $actor): Ticket
     {
         DB::transaction(function () use ($source, $target) {
