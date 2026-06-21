@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-07 — Build 2FA setup page (QR code, TOTP verification)
+**Next task:** P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
 
 ---
 
@@ -81,6 +81,7 @@
 - [x] Login page: LoginRequest (rate-limited), AuthService, AuthController; Pages/Auth/Login.tsx (email, password+toggle, remember me); Dashboard/Index.tsx placeholder
 - [x] Registration + email verification: RegisterRequest, AuthService::register(), RegisterController, VerifyEmailController, EmailVerificationNotificationController; Register.tsx, VerifyEmail.tsx; dashboard now requires verified middleware
 - [x] Forgot/reset password: ForgotPasswordController, ResetPasswordController, both Requests; ForgotPassword.tsx, ResetPassword.tsx; uses Laravel Password facade + PasswordReset event
+- [x] 2FA setup: TwoFactorService (BaconQrCode SVG QR), TwoFactorSetupController, EnableTwoFactorRequest; TwoFactorSetup.tsx (QR code display, 6-digit confirm, disable with password)
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 

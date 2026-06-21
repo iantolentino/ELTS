@@ -126,7 +126,13 @@
   - Pages/Auth/ForgotPassword.tsx: email field, success status display, back to sign in link
   - Pages/Auth/ResetPassword.tsx: read-only email, new password+toggle, confirm+toggle
   - Build: 0 errors, 944 modules
-- [ ] P1-07 — Build 2FA setup page (QR code, TOTP verification)
+- [x] P1-07 — Build 2FA setup page (QR code, TOTP verification)
+  - TwoFactorService: initiate (generate + persist secret), getQrCodeDataUri (BaconQrCode SVG → base64 data URI), verifyCode, enable (sets two_factor_confirmed_at), disable (clears both fields)
+  - EnableTwoFactorRequest: digits:6 validation
+  - TwoFactorSetupController: show (generates secret if needed, passes QR + secret to page), enable (verify code → set confirmed_at), disable (current_password validation)
+  - Routes (auth+verified): GET/POST/DELETE /user/two-factor-setup
+  - TwoFactorSetup.tsx: two states — setup (QR code image, formatted manual key, 6-digit input, enable button disabled until 6 chars) and enabled (success state, inline disable form with password confirm)
+  - Build: 0 errors, 945 modules
 - [ ] P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
 - [ ] P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
 - [ ] P1-10 — Build Admin: User list page (sortable, filterable, paginated)
@@ -387,5 +393,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-06 — Build forgot password / reset password flow
-- Next task: P1-07 — Build 2FA setup page (QR code, TOTP verification)
+- Last completed task: P1-07 — Build 2FA setup page (QR code, TOTP verification)
+- Next task: P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
