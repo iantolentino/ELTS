@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Services\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,10 +32,12 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // P1-08: redirect to 2FA challenge when 2FA is confirmed and required
-        // if ($user->two_factor_confirmed_at) {
-        //     return redirect()->route('two-factor.challenge');
-        // }
+        if ($user->two_factor_confirmed_at) {
+            Auth::logout();
+            $request->session()->put('two_factor_user_id', $user->id);
+            $request->session()->put('two_factor_remember', $request->boolean('remember'));
+            return redirect()->route('two-factor.challenge');
+        }
 
         return redirect()->intended($this->authService->redirectPath($user));
     }

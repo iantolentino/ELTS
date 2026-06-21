@@ -133,7 +133,14 @@
   - Routes (auth+verified): GET/POST/DELETE /user/two-factor-setup
   - TwoFactorSetup.tsx: two states — setup (QR code image, formatted manual key, 6-digit input, enable button disabled until 6 chars) and enabled (success state, inline disable form with password confirm)
   - Build: 0 errors, 945 modules
-- [ ] P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
+- [x] P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
+  - AuthController::login() updated: logs user out after Auth::attempt, stores two_factor_user_id + two_factor_remember in session, redirects to challenge
+  - TwoFactorChallengeController: show() guards with session key, store() verifies code → Auth::login($user, $remember) → clears session keys → redirect to dashboard
+  - TwoFactorChallengeRequest: digits:6 validation
+  - Routes (guest): GET/POST /two-factor-challenge
+  - TwoFactorChallenge.tsx: lock icon, large mono code input (centered, tracking, auto-strips non-digits), submit disabled until 6 chars, "use a different account" logout link
+  - Full flow: login → 2FA intercept → challenge page → verify → dashboard
+  - Build: 0 errors, 946 modules
 - [ ] P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
 - [ ] P1-10 — Build Admin: User list page (sortable, filterable, paginated)
 - [ ] P1-11 — Build Admin: Create / edit user form (role, team, department assignment)
@@ -393,5 +400,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-07 — Build 2FA setup page (QR code, TOTP verification)
-- Next task: P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
+- Last completed task: P1-08 — Build 2FA challenge page
+- Next task: P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
