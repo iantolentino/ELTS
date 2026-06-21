@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 1 — Authentication & User Management (IN PROGRESS)
-**Next task:** P1-02 — Create teams and departments table migrations
+**Next task:** P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
 
 ---
 
@@ -73,6 +73,10 @@
 - [x] Database migrated: users, cache, jobs, job_batches, failed_jobs, permissions, roles, activity_log — all tables created in elts_db
 - [x] users table extended: 14 ELTS columns added (phone, avatar, job_title, timezone, locale, availability_status, is_vip, is_active, two_factor_secret, two_factor_confirmed_at, last_login_at, last_login_ip, team_id, department_id)
 - [x] User model updated: MustVerifyEmail, all new fields in $fillable and casts
+- [x] departments table: name, description, is_active
+- [x] teams table: name, description, department_id (FK), is_active
+- [x] users.team_id and users.department_id FK constraints wired (nullOnDelete)
+- [x] Models created: Department.php, Team.php with relationships; User.php updated with team()/department() BelongsTo
 - [x] Scheduler: routes/console.php configured; activitylog:clean daily; cPanel cron commands documented in deployment.md
 - [x] config/ticketing.php: 8 sections (tickets, sla, email, satisfaction, security, portal, kb, pagination) — all env()-backed
 

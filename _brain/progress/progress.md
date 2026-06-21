@@ -90,7 +90,13 @@
   - FK constraints for team_id/department_id deferred to P1-02 (teams/departments table not yet created)
   - User model updated: MustVerifyEmail added, all fields in $fillable, is_active + last_login_at casts added
   - Migration verified: all 22 columns present in users table
-- [ ] P1-02 — Create `teams` and `departments` table migrations
+- [x] P1-02 — Create `teams` and `departments` table migrations
+  - Created: 2026_06_21_110000_create_departments_table.php (name, description, is_active)
+  - Created: 2026_06_21_110001_create_teams_table.php (name, description, department_id FK, is_active)
+  - Created: 2026_06_21_110002_add_user_team_department_foreign_keys.php (FK constraints on users.team_id + users.department_id → nullOnDelete)
+  - Models created: app/Models/Department.php, app/Models/Team.php (with relationships)
+  - User model updated: team() and department() BelongsTo relationships added
+  - All 3 migrations applied successfully
 - [ ] P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
 - [ ] P1-04 — Build login page (AuthLayout, email + password form, remember me)
 - [ ] P1-05 — Build client registration page with email verification
@@ -356,5 +362,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-01 — Create users table migration with all fields
-- Next task: P1-02 — Create teams and departments table migrations
+- Last completed task: P1-02 — Create teams and departments table migrations
+- Next task: P1-03 — Seed roles and permissions via RolesAndPermissionsSeeder
