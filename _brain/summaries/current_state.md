@@ -7,7 +7,7 @@
 
 **Last updated:** 2026-06-21
 **Current phase:** Phase 0 — Project Setup (IN PROGRESS)
-**Next task:** P0-06 — Install spatie/laravel-activitylog and publish config
+**Next task:** P0-07 — Install barryvdh/laravel-dompdf
 
 ---
 

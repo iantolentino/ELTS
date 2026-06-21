@@ -15,7 +15,7 @@
 - [x] P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
 - [x] P0-04 — Install and configure Tailwind CSS with custom design tokens (colors, fonts)
 - [x] P0-05 — Install spatie/laravel-permission and publish config
-- [ ] P0-06 — Install spatie/laravel-activitylog and publish config
+- [x] P0-06 — Install spatie/laravel-activitylog and publish config
 - [ ] P0-07 — Install barryvdh/laravel-dompdf
 - [ ] P0-08 — Install maatwebsite/excel
 - [ ] P0-09 — Install webklex/laravel-imap
