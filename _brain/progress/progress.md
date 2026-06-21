@@ -119,7 +119,13 @@
   - Pages/Auth/Register.tsx: name, email, password+toggle, confirm password+toggle
   - Pages/Auth/VerifyEmail.tsx: email notice, resend button, Inertia logout
   - Build: 0 errors, 942 modules
-- [ ] P1-06 — Build forgot password / reset password flow
+- [x] P1-06 — Build forgot password / reset password flow
+  - ForgotPasswordRequest + ForgotPasswordController: sends reset link via Password::sendResetLink, back with status on success
+  - ResetPasswordRequest + ResetPasswordController: validates token/email/password/confirmation, calls Password::reset, fires PasswordReset event, redirects to login with status
+  - Routes (guest): GET/POST /forgot-password, GET /reset-password/{token}, POST /reset-password
+  - Pages/Auth/ForgotPassword.tsx: email field, success status display, back to sign in link
+  - Pages/Auth/ResetPassword.tsx: read-only email, new password+toggle, confirm+toggle
+  - Build: 0 errors, 944 modules
 - [ ] P1-07 — Build 2FA setup page (QR code, TOTP verification)
 - [ ] P1-08 — Build 2FA challenge page (shown on login if 2FA enabled)
 - [ ] P1-09 — Build user profile page (name, avatar, password change, 2FA toggle)
@@ -381,5 +387,5 @@
 
 ## CURRENT STATUS
 - Phase: 1 — IN PROGRESS
-- Last completed task: P1-05 — Build client registration page with email verification
-- Next task: P1-06 — Build forgot password / reset password flow
+- Last completed task: P1-06 — Build forgot password / reset password flow
+- Next task: P1-07 — Build 2FA setup page (QR code, TOTP verification)
