@@ -7,8 +7,11 @@
 ## PHASE 0 — PROJECT SETUP
 **Goal:** Functional skeleton with all dependencies installed and configured.
 
-- [ ] P0-01 — Install Laravel 11 via Composer, configure `.env` for MySQL
-- [ ] P0-02 — Install and configure Inertia.js (server-side adapter)
+- [x] P0-01 — Install Laravel 11 via Composer, configure `.env` for MySQL
+  - Installed: Laravel Framework 13.16.1 (latest stable), PHP 8.3.30, Composer 2.10.1 via Laragon
+  - DB_CONNECTION=mysql, DB_DATABASE=elts_db configured in .env and .env.example
+  - Note: PHP zip + fileinfo extensions enabled in Laragon php.ini
+- [x] P0-02 — Install and configure Inertia.js (server-side adapter)
 - [ ] P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
 - [ ] P0-04 — Install and configure Tailwind CSS with custom design tokens (colors, fonts)
 - [ ] P0-05 — Install spatie/laravel-permission and publish config

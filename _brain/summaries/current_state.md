@@ -6,8 +6,8 @@
 ## STATE: SYSTEM_GENERATION COMPLETE — READY FOR EXECUTION_MODE
 
 **Last updated:** 2026-06-21
-**Current phase:** Phase 0 — Project Setup (NOT STARTED)
-**Next task:** P0-01 — Install Laravel 11 via Composer, configure .env for MySQL
+**Current phase:** Phase 0 — Project Setup (IN PROGRESS)
+**Next task:** P0-03 — Install React 18 + TypeScript + Vite, configure tsconfig
 
 ---
 
@@ -45,7 +45,13 @@
 - [x] `integrations/guide.md` — Slack/Teams migration guide
 
 ### Application Code
-- [ ] Nothing created yet — Laravel project not initialized
+- [x] Laravel 13.16.1 installed (PHP 8.3.30, Composer 2.10.1)
+- [x] `.env` configured: DB_CONNECTION=mysql, DB_DATABASE=elts_db, QUEUE=database, CACHE=file, SESSION=file, MAIL=log
+- [x] `.env.example` updated to match
+- [x] Inertia.js v3.1 installed, HandleInertiaRequests middleware registered in bootstrap/app.php
+- [x] `resources/views/app.blade.php` root template created (Vite + Inertia directives)
+- [x] Shared props wired: auth.user, flash.success, flash.error
+- [x] `routes/web.php` updated to use Inertia::render()
 
 ---
 
@@ -76,7 +82,7 @@
 ---
 
 ## BLOCKERS
-- None currently
+- None
 
 ---
 
