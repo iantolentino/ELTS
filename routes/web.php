@@ -27,6 +27,8 @@ use App\Http\Controllers\Admin\HolidayController as AdminHolidayController;
 use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\AutomationController as AdminAutomationController;
+use App\Http\Controllers\Admin\CannedResponseController as AdminCannedResponseController;
+use App\Http\Controllers\CannedResponseSearchController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
 use App\Http\Controllers\AvailabilityController;
@@ -223,7 +225,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/automations/{automation}',          [AdminAutomationController::class, 'update'])->name('automations.update');
         Route::delete('/automations/{automation}',       [AdminAutomationController::class, 'destroy'])->name('automations.destroy');
         Route::patch('/automations/{automation}/toggle', [AdminAutomationController::class, 'toggle'])->name('automations.toggle');
+
+        Route::get('/canned-responses',                          [AdminCannedResponseController::class, 'index'])->name('canned-responses.index');
+        Route::post('/canned-responses',                         [AdminCannedResponseController::class, 'store'])->name('canned-responses.store');
+        Route::put('/canned-responses/{cannedResponse}',         [AdminCannedResponseController::class, 'update'])->name('canned-responses.update');
+        Route::delete('/canned-responses/{cannedResponse}',      [AdminCannedResponseController::class, 'destroy'])->name('canned-responses.destroy');
     });
 
-    Route::get('/users/mention-search', UserMentionController::class)->name('users.mention-search');
+    Route::get('/users/mention-search',        UserMentionController::class)->name('users.mention-search');
+    Route::get('/canned-responses/search',     CannedResponseSearchController::class)->name('canned-responses.search');
 });

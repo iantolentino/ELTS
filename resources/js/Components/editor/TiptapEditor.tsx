@@ -1,6 +1,7 @@
 import './TiptapEditor.css';
 import 'tippy.js/dist/tippy.css';
-import React, { createRef, useEffect } from 'react';
+import React, { createRef, useEffect, useRef, useState } from 'react';
+import CannedResponsePicker from './CannedResponsePicker';
 import { createRoot } from 'react-dom/client';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -17,6 +18,7 @@ interface Props {
     placeholder?: string;
     minHeight?:  number;
     editable?:   boolean;
+    ticketId?:   number;
 }
 
 function Btn({ onClick, active, title, children }: {
@@ -87,7 +89,9 @@ const MentionExtension = Mention.configure({
     },
 });
 
-export default function TiptapEditor({ content, onChange, placeholder = 'Write something…', minHeight = 150, editable = true }: Props) {
+export default function TiptapEditor({ content, onChange, placeholder = 'Write something…', minHeight = 150, editable = true, ticketId }: Props) {
+    const [showCanned, setShowCanned] = useState(false);
+    const toolbarRef = useRef<HTMLDivElement>(null);
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -129,6 +133,22 @@ export default function TiptapEditor({ content, onChange, placeholder = 'Write s
                     <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()}         active={editor.isActive('codeBlock')}             title="Code block">≡ Code</Btn>
                     <SEP />
                     <span className="text-[10px] text-[--color-text-subtle] px-1">@ to mention</span>
+                    <SEP />
+                    <div className="relative" ref={toolbarRef}>
+                        <Btn onClick={() => setShowCanned(v => !v)} active={showCanned} title="Insert canned response">
+                            ≡ Canned
+                        </Btn>
+                        {showCanned && (
+                            <CannedResponsePicker
+                                ticketId={ticketId}
+                                onInsert={(html) => {
+                                    editor.chain().focus().insertContent(html).run();
+                                    onChange(editor.getHTML());
+                                }}
+                                onClose={() => setShowCanned(false)}
+                            />
+                        )}
+                    </div>
                 </div>
             )}
             <EditorContent editor={editor} className="px-4 py-3 text-sm text-[--color-text]" style={{ minHeight }} />

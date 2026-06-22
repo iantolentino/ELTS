@@ -573,7 +573,7 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                                     {can.note_internal && <button onClick={() => setActiveTab('note')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${activeTab === 'note' ? 'border-warning-500 text-warning-700' : 'border-transparent text-[--color-text-muted] hover:text-[--color-text]'}`}><LockClosedIcon className="w-3.5 h-3.5" />Internal Note</button>}
                                 </div>
                                 <form onSubmit={handleSubmit} className="space-y-3">
-                                    <TiptapEditor content={body} onChange={setBody} placeholder={activeTab === 'reply' ? 'Write a reply…' : 'Add an internal note…'} minHeight={140} />
+                                    <TiptapEditor content={body} onChange={setBody} placeholder={activeTab === 'reply' ? 'Write a reply…' : 'Add an internal note…'} minHeight={140} ticketId={ticket.id} />
                                     <div className="flex justify-end">
                                         <Button variant={activeTab === 'note' ? 'warning' : 'primary'} size="sm" disabled={submitting || !body || body === '<p></p>'}>
                                             {submitting ? 'Sending…' : activeTab === 'reply' ? 'Send Reply' : 'Add Note'}
