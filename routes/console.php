@@ -32,8 +32,10 @@ app()->booted(function () {
     // P3-04 — Poll all active IMAP mailboxes and queue processing jobs
     $schedule->command('mailboxes:poll')->everyTwoMinutes();
 
+    // P4-04 — Check for SLA breaches and fire SLABreached event
+    $schedule->job(new \App\Jobs\CheckSLABreaches)->everyFiveMinutes();
+
     // Placeholder — uncomment as each phase implements the corresponding job:
-    // $schedule->job(new \App\Jobs\CheckSLABreaches)->everyFiveMinutes();
     // $schedule->command('tickets:auto-close')->daily();
     // $schedule->command('reports:generate-scheduled')->daily();
 });

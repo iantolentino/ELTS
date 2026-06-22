@@ -378,33 +378,106 @@
   - extractMessageId(): prefers RFC 2822 Message-ID header, falls back to uid-{mailboxId}-{uid}
   - Attachment metadata ({name, size, mime_type}) stored in JSON; bodies stored as body_text/body_html
   - Soft fail per message AND per mailbox so one bad email/mailbox never aborts the batch
-- [ ] P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)
-- [ ] P3-04 — Schedule ProcessIncomingEmail every 2 minutes in Kernel.php
-- [ ] P3-05 — Build outgoing email templates (Blade): ticket_created, reply_received, ticket_resolved, ticket_closed, ticket_assigned
-- [ ] P3-06 — Build SendTicketEmail job (queued, dispatched on ticket events)
-- [ ] P3-07 — Wire events: TicketCreated → SendTicketEmail, TicketReplied → SendTicketEmail, etc.
-- [ ] P3-08 — Build Admin: Mailbox management page (add IMAP credentials, test connection, enable/disable)
-- [ ] P3-09 — Build Admin: Email template editor (customize subject + body per event type)
-- [ ] P3-10 — Build email bounce/failure detection and log to `incoming_emails.status`
-- [ ] P3-11 — Build CC/BCC on ticket replies (store + include in outgoing email)
-- [ ] P3-12 — Feature tests: incoming email parsing, outgoing email dispatch
+- [x] P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)
+  - Detects reply by TKT-NNNNN in subject; find-or-creates client user from from_email; marks processed/failed; failed() hook for retry exhaustion
+  - Dispatched by MailboxService immediately after creating each IncomingEmail record
+- [x] P3-04 — Schedule ProcessIncomingEmail every 2 minutes in Kernel.php
+  - PollMailboxes artisan command; routes/console.php: schedule->command('mailboxes:poll')->everyTwoMinutes()
+- [x] P3-05 — Build outgoing email templates (Blade): ticket_created, reply_received, ticket_resolved, ticket_closed, ticket_assigned
+  - resources/views/emails/layout.blade.php + 5 event views; branded HTML with inline styles, ticket-box card, CTA button
+- [x] P3-06 — Build SendTicketEmail job (queued, dispatched on ticket events)
+  - TicketMail Mailable: resolves subject/body from EmailTemplate DB record ({{variable}} interpolation) or falls back to Blade view
+  - SendTicketEmail job: queued, 3 tries, CC support
+- [x] P3-07 — Wire events: TicketCreated → SendTicketEmail, TicketReplied → SendTicketEmail, etc.
+  - Events: TicketCreated, TicketReplied, TicketStatusChanged, TicketAssigned
+  - SendTicketNotification listener (4 handlers); registered in AppServiceProvider
+  - TicketService fires events: createTicket, addReply, changeStatus (transition-only), assign (on change)
+- [x] P3-08 — Build Admin: Mailbox management page (add IMAP credentials, test connection, enable/disable)
+  - MailboxController, CreateMailboxRequest, UpdateMailboxRequest, MailboxPolicy (settings.email)
+  - POST /admin/mailboxes/{mailbox}/test JSON endpoint; Pages/Admin/Mailboxes/Index.tsx with inline form + test button
+- [x] P3-09 — Build Admin: Email template editor (customize subject + body per event type)
+  - email_templates migration + EmailTemplate model (event_name unique, subject/body nullable = use default)
+  - EmailTemplateController (updateOrCreate); Pages/Admin/EmailTemplates/Index.tsx (expand/collapse per event, TiptapEditor, variable palette)
+- [x] P3-10 — Build email bounce/failure detection and log to `incoming_emails.status`
+  - ProcessIncomingEmail::failed() marks final failure after all retries; try/catch marks 'failed' + failure_reason on first exception
+- [x] P3-11 — Build CC/BCC on ticket replies (store + include in outgoing email)
+  - reply.cc parsed and passed as CC array to SendTicketEmail; stored in ticket_replies.cc column
+- [x] P3-12 — Feature tests: incoming email parsing, outgoing email dispatch
+  - IncomingEmailTest (5 tests), OutgoingEmailTest (5 tests)
+  - MailboxFactory + IncomingEmailFactory (processed/failed/withReplySubject states)
 
 ---
 
 ## PHASE 4 — SLA MANAGEMENT
 **Goal:** Configurable SLA policies with real-time tracking and breach alerts.
 
-- [ ] P4-01 — Migrations: sla_policies, sla_records, business_hours, holidays
-- [ ] P4-02 — Build SLAService: calculate due times respecting business hours + holidays
-- [ ] P4-03 — Build SLARecord creation on ticket open (first_response_due, resolution_due)
-- [ ] P4-04 — Build CheckSLABreaches job (scheduled every 5 min, marks breached=true, fires event)
-- [ ] P4-05 — Build SLABreached event + listener (sends in-app + email alert)
-- [ ] P4-06 — Build SLA pause/resume on ticket (sets paused_at, adjusts due times on resume)
-- [ ] P4-07 — Build SLA status badge on ticket (Green / Yellow warning / Red breached)
-- [ ] P4-08 — Build Admin: SLA policy management page (create, edit, assign to priority/tier)
-- [ ] P4-09 — Build Admin: Business hours configuration (per team, day-of-week schedule)
-- [ ] P4-10 — Build Admin: Holiday calendar management
-- [ ] P4-11 — Feature tests: SLA calculation, breach detection, pause/resume
+- [x] P4-01 — Migrations: sla_policies, sla_records, business_hours, holidays
+  - sla_policies: name, priority (nullable enum = applies to all), first_response_minutes, resolution_minutes, uses_business_hours, is_active
+  - sla_records: ticket_id (unique FK), sla_policy_id FK, first_response_due/resolution_due, breached booleans, met_at timestamps, paused_at, paused_minutes (accumulated)
+  - business_hours: sla_policy_id (nullable = global default), day_of_week 0–6, is_open, open_time/close_time, timezone; unique(policy, day)
+  - holidays: sla_policy_id (nullable = global), name, date, recurring_yearly
+  - Models: SlaPolicy (formatMinutes labels, relations), SlaRecord (isPaused(), resolutionStatus() → ok/warning/breached/met), BusinessHour (dayName() helper), Holiday
+- [x] P4-02 — Build SLAService: calculate due times respecting business hours + holidays
+  - SLAService: createRecord(), findPolicy() (priority-specific → catch-all), calculateDue() (calendar or business-hours path)
+  - addBusinessMinutes(): walks business-hour windows day-by-day, skips closed days and holidays, respects per-day timezone
+  - DEFAULT_HOURS fallback: Mon–Fri 09:00–17:00 UTC when no DB config exists
+  - loadHoursMap(): policy-specific → global (sla_policy_id null) → DEFAULT_HOURS
+  - loadHolidayDates(): policy + global holidays; recurring_yearly matches on m-d only
+  - checkFirstResponseMet() / checkResolutionMet(): stamp met_at + breached flag
+  - Ticket model: added slaRecord() HasOne relation
+- [x] P4-03 — Build SLARecord creation on ticket open (first_response_due, resolution_due)
+  - TicketService: injected SLAService; createTicket() calls slaService->createRecord() after ticket refresh
+  - addReply(): calls slaService->checkFirstResponseMet() on first agent reply
+  - changeStatus(): calls slaService->checkResolutionMet() on first close/resolve transition
+- [x] P4-04 — Build CheckSLABreaches job (scheduled every 5 min, marks breached=true, fires event)
+  - SLABreached event: ticket, record, type ('first_response'|'resolution')
+  - CheckSLABreaches job (ShouldQueue): chunkById(100) on overdue unbreached records for both SLA types; updates breached flag then dispatches SLABreached
+  - routes/console.php: $schedule->job(new CheckSLABreaches)->everyFiveMinutes() activated
+- [x] P4-05 — Build SLABreached event + listener (sends in-app + email alert)
+  - SendSLABreachNotification listener: creates TicketNote (in-app breach marker); dispatches SendTicketEmail to assignee with 'sla_breached' event
+  - sla_breached blade template: red alert header, ticket details box, "View Ticket" CTA button
+  - EmailTemplate::$events: added 'sla_breached' entry (visible in admin email template editor)
+  - TicketMail::resolveSubject(): added 'sla_breached' case with subject pattern
+  - AppServiceProvider: wired SLABreached → SendSLABreachNotification::handle
+- [x] P4-06 — Build SLA pause/resume on ticket (sets paused_at, adjusts due times on resume)
+  - SLAService::pause(): sets paused_at=now() if not already paused
+  - SLAService::resume(): computes wall-clock minutes paused, accumulates paused_minutes, extends first_response_due + resolution_due by that amount (calendar minutes), clears paused_at
+  - TicketSlaController: pause() + resume() — Gate::authorize('update', $ticket); returns back() with flash
+  - Routes: POST /tickets/{ticket}/sla/pause (tickets.sla.pause), POST /tickets/{ticket}/sla/resume (tickets.sla.resume)
+- [x] P4-07 — Build SLA status badge on ticket (Green / Yellow warning / Red breached)
+  - TicketController::show(): eager-loads slaRecord.policy; passes sla{} object with status, paused, due diffs, breached flags, met_at diffs, policy_name
+  - SlaData interface + SlaData added to TicketData in Show.tsx
+  - SLARow helper: renders first_response / resolution row with met / breached / due states
+  - SLAPanel component: overall status pill (color-coded), paused banner, SLARow pair, policy name, Pause/Resume toggle (canUpdate only)
+  - SLA panel inserted in right sidebar after tags, before Linked Tickets
+  - Build: 0 errors
+- [x] P4-08 — Build Admin: SLA policy management page (create, edit, assign to priority/tier)
+  - SlaPolicyPolicy: viewAny→sla.view; create/update/delete→sla.manage (auto-discovered)
+  - CreateSlaPolicyRequest + UpdateSlaPolicyRequest: validate name, priority enum nullable, first_response/resolution_minutes, uses_business_hours, is_active
+  - SlaPolicyController: index (withCount slaRecords, ordered by priority), store, update, destroy
+  - Admin/SlaPolicies/Index.tsx: inline PolicyForm (create/edit), table rows with priority badge, time labels, business-hours flag, record count; delete confirm
+  - Routes: GET/POST /admin/sla-policies, PUT/DELETE /admin/sla-policies/{slaPolicy}
+  - Sidebar: "SLA Policies" entry with ClockIcon (super_admin/admin)
+  - Build: 0 errors
+- [x] P4-09 — Build Admin: Business hours configuration (per team, day-of-week schedule)
+  - BusinessHourController: index() groups rows by policy_id (null→'global'); builds 7-day schedule maps with Mon–Fri defaults; update() validates and upserts 7 BusinessHour rows per policy
+  - Admin/BusinessHours/Index.tsx: left-panel policy selector (Global Default + each SLA policy); right-panel ScheduleEditor with 7-row table (open toggle, time range inputs, per-row timezone select); "Apply timezone to all" shortcut; key={selected} forces remount on policy switch
+  - Routes: GET/PUT /admin/business-hours (admin.business-hours.index / .update)
+  - Sidebar: "Business Hours" with AdjustmentsHorizontalIcon (super_admin/admin)
+  - Build: 0 errors
+- [x] P4-10 — Build Admin: Holiday calendar management
+  - HolidayController: index() groups holidays by policy_id (null→'global'); store() validates + creates; destroy() deletes
+  - Admin/Holidays/Index.tsx: left-panel policy selector (Global + each SLA policy); right-panel table with date, recurring badge, delete; AddHolidayForm inline at bottom; key={selected} resets form on policy switch
+  - Routes: GET/POST /admin/holidays, DELETE /admin/holidays/{holiday}
+  - Sidebar: "Holidays" with CalendarDaysIcon (super_admin/admin)
+  - Build: 0 errors
+- [x] P4-11 — Feature tests: SLA calculation, breach detection, pause/resume
+  - SlaPolicyFactory: forPriority(), businessHours(), inactive() states
+  - SlaRecordFactory: overdue(), met() states
+  - SlaCalculationTest (7 tests): calendar due times, catch-all fallback, no-policy null record, business-hours day-boundary, weekend start advance, checkFirstResponseMet met/breached
+  - SlaBreachPauseTest (10 tests): first_response breach, resolution breach, SLABreached event dispatch x2, no re-breach, no breach on met records, pause/idempotent, resume extends due times, resume no-op, breach note in ticket
+  - Fixed Carbon diffInMinutes direction in SLAService::resume() (paused_at.diffInMinutes(now) not now.diffInMinutes(paused_at))
+  - All 17 tests passing
 
 ---
 
@@ -588,5 +661,5 @@
 
 ## CURRENT STATUS
 - Phase: 3 — IN PROGRESS
-- Last completed task: P3-02 — MailboxService (IMAP poll via webklex)
-- Next task: P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)
+- Last completed task: P4-11 — SLA feature tests (17 tests, all passing)
+- Next task: P5-01 — Build Automation: trigger/condition/action engine schema + migrations

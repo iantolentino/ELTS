@@ -103,7 +103,7 @@ class TicketController extends Controller
             'parentTicket:id,ticket_number,subject',
             'childTickets:id,parent_ticket_id,ticket_number,subject',
             'replies.user', 'notes.user', 'watchers.user', 'customFieldValues.field',
-            'attachments.user',
+            'attachments.user', 'slaRecord.policy',
         ]);
 
         /** @var User $user */
@@ -162,6 +162,19 @@ class TicketController extends Controller
                     'created_at' => $n->created_at->format('M d, Y g:i A'),
                 ])->all(),
                 'activity'          => $activity,
+                'sla'               => $ticket->slaRecord ? [
+                    'status'                   => $ticket->slaRecord->resolutionStatus(),
+                    'paused'                   => $ticket->slaRecord->isPaused(),
+                    'policy_name'              => $ticket->slaRecord->policy?->name,
+                    'first_response_due'       => $ticket->slaRecord->first_response_due?->toIso8601String(),
+                    'first_response_due_diff'  => $ticket->slaRecord->first_response_due?->diffForHumans(),
+                    'first_response_breached'  => $ticket->slaRecord->first_response_breached,
+                    'first_response_met_at'    => $ticket->slaRecord->first_response_met_at?->diffForHumans(),
+                    'resolution_due'           => $ticket->slaRecord->resolution_due?->toIso8601String(),
+                    'resolution_due_diff'      => $ticket->slaRecord->resolution_due?->diffForHumans(),
+                    'resolution_breached'      => $ticket->slaRecord->resolution_breached,
+                    'resolution_met_at'        => $ticket->slaRecord->resolution_met_at?->diffForHumans(),
+                ] : null,
                 'custom_field_values' => $ticket->customFieldValues->map(fn ($cfv) => [
                     'field' => ['id' => $cfv->field->id, 'label' => $cfv->field->label, 'type' => $cfv->field->type],
                     'value' => $cfv->value,

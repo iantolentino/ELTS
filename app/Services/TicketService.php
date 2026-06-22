@@ -9,6 +9,7 @@ use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketReplied;
 use App\Events\TicketStatusChanged;
+use App\Services\SLAService;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketNote;
@@ -25,6 +26,7 @@ class TicketService
 {
     public function __construct(
         private readonly TicketRepositoryInterface $ticketRepository,
+        private readonly SLAService $slaService,
     ) {}
 
     public function listTickets(array $params, User $actor): LengthAwarePaginator
@@ -62,6 +64,7 @@ class TicketService
 
         $ticket = $ticket->refresh();
         TicketCreated::dispatch($ticket);
+        $this->slaService->createRecord($ticket);
 
         return $ticket;
     }
@@ -103,12 +106,20 @@ class TicketService
         $updated   = $this->ticketRepository->update($ticket, $updates);
         $newStatus = TicketStatus::find($statusId);
 
+        $isNowClosed   = (bool) $newStatus?->is_closed;
+        $isNowResolved = !$isNowClosed && strtolower($newStatus?->name ?? '') === 'resolved';
+
+        // Mark SLA resolution on first close/resolve transition
+        if (!$wasClosed && ($isNowClosed || $isNowResolved)) {
+            $this->slaService->checkResolutionMet($updated->fresh(['slaRecord']));
+        }
+
         // Only fire status change notification on transition (not on every status change)
         if (!$wasClosed) {
             TicketStatusChanged::dispatch(
                 $updated->fresh(['status', 'requester']),
-                isNowClosed:   (bool) $newStatus?->is_closed,
-                isNowResolved: !$newStatus?->is_closed && strtolower($newStatus?->name ?? '') === 'resolved',
+                isNowClosed:   $isNowClosed,
+                isNowResolved: $isNowResolved,
             );
         }
 
@@ -151,6 +162,7 @@ class TicketService
 
         if ($ticket->first_response_at === null && $actor->id !== $ticket->requester_id) {
             $this->ticketRepository->update($ticket, ['first_response_at' => now()]);
+            $this->slaService->checkFirstResponseMet($ticket->fresh(['slaRecord']));
         }
 
         TicketReplied::dispatch($ticket, $reply, $actor);

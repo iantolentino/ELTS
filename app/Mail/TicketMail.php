@@ -66,6 +66,7 @@ class TicketMail extends Mailable
             'ticket_resolved' => "[{$number}] Your ticket has been resolved",
             'ticket_closed'   => "[{$number}] Your ticket has been closed",
             'ticket_assigned' => "[{$number}] Ticket assigned to you: {$this->ticket->subject}",
+            'sla_breached'    => "[{$number}] SLA Breach Alert: {$this->ticket->subject}",
             default           => "[{$number}] Ticket update",
         };
     }

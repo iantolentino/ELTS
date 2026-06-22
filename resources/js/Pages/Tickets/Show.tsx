@@ -24,6 +24,20 @@ interface TicketReplyData { id: number; user: UserMin; body: string; is_html: bo
 interface TicketNoteData  { id: number; user: UserMin; body: string; is_html: boolean; created_at: string; }
 interface CFValue { field: { id: number; label: string; type: string }; value: string | null; }
 
+interface SlaData {
+    status: 'ok' | 'warning' | 'breached' | 'met';
+    paused: boolean;
+    policy_name: string | null;
+    first_response_due: string | null;
+    first_response_due_diff: string | null;
+    first_response_breached: boolean;
+    first_response_met_at: string | null;
+    resolution_due: string | null;
+    resolution_due_diff: string | null;
+    resolution_breached: boolean;
+    resolution_met_at: string | null;
+}
+
 interface TicketData {
     id: number; ticket_number: string; subject: string; description: string;
     priority: 'low' | 'medium' | 'high' | 'critical'; source: string; is_vip: boolean;
@@ -36,6 +50,7 @@ interface TicketData {
     attachments: Attachment[];
     replies: TicketReplyData[]; notes: TicketNoteData[];
     activity: ActivityEntry[]; custom_field_values: CFValue[];
+    sla: SlaData | null;
 }
 
 interface Perms {
@@ -257,6 +272,99 @@ function TagPicker({ ticket, allTags, canUpdate }: { ticket: TicketData; allTags
                 )}
                 {ticket.tags.length === 0 && !canUpdate && <span className="text-xs text-[--color-text-muted] italic">None</span>}
             </div>
+        </div>
+    );
+}
+
+/* ─── SLAPanel ───────────────────────────────────────────────────────────── */
+const SLA_STATUS_CLS: Record<string, string> = {
+    ok:      'bg-success-100 text-success-700',
+    warning: 'bg-warning-100 text-warning-700',
+    breached:'bg-danger-100 text-danger-700',
+    met:     'bg-success-100 text-success-700',
+};
+const SLA_DOT_CLS: Record<string, string> = {
+    ok:      'bg-success-500',
+    warning: 'bg-warning-500',
+    breached:'bg-danger-500',
+    met:     'bg-success-500',
+};
+
+function SLARow({ label, dueLabel, breached, metAt }: { label: string; dueLabel: string | null; breached: boolean; metAt: string | null }) {
+    if (!dueLabel && !metAt) return null;
+    return (
+        <div className="flex items-start justify-between gap-2 text-xs">
+            <span className="text-[--color-text-muted] flex-shrink-0">{label}</span>
+            {metAt ? (
+                <span className="text-success-700 font-medium">Met {metAt}</span>
+            ) : breached ? (
+                <span className="text-danger-700 font-medium">{dueLabel} (breached)</span>
+            ) : (
+                <span className="text-[--color-text] font-medium">{dueLabel}</span>
+            )}
+        </div>
+    );
+}
+
+function SLAPanel({ ticket, canUpdate }: { ticket: TicketData; canUpdate: boolean }) {
+    const sla = ticket.sla;
+    if (!sla) return null;
+
+    const overallCls = SLA_STATUS_CLS[sla.status] ?? SLA_STATUS_CLS.ok;
+    const dotCls     = SLA_DOT_CLS[sla.status]    ?? SLA_DOT_CLS.ok;
+
+    return (
+        <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">SLA</label>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${overallCls}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
+                    {sla.status === 'met' ? 'Met' : sla.status === 'breached' ? 'Breached' : sla.status === 'warning' ? 'Due soon' : 'On track'}
+                </span>
+            </div>
+
+            {sla.paused && (
+                <p className="text-[11px] font-medium text-warning-700 bg-warning-50 border border-warning-200 rounded px-2 py-1">
+                    ⏸ SLA clock is paused
+                </p>
+            )}
+
+            <div className="space-y-1.5">
+                <SLARow
+                    label="1st response"
+                    dueLabel={sla.first_response_due_diff}
+                    breached={sla.first_response_breached}
+                    metAt={sla.first_response_met_at}
+                />
+                <SLARow
+                    label="Resolution"
+                    dueLabel={sla.resolution_due_diff}
+                    breached={sla.resolution_breached}
+                    metAt={sla.resolution_met_at}
+                />
+            </div>
+
+            {sla.policy_name && (
+                <p className="text-[11px] text-[--color-text-muted]">Policy: {sla.policy_name}</p>
+            )}
+
+            {canUpdate && !sla.resolution_met_at && (
+                <div className="flex gap-2 pt-1">
+                    {sla.paused ? (
+                        <button
+                            onClick={() => router.post(`/tickets/${ticket.id}/sla/resume`, {}, { preserveScroll: true })}
+                            className="flex-1 text-[11px] font-medium py-1 px-2 rounded border border-success-300 text-success-700 hover:bg-success-50 transition-colors">
+                            ▶ Resume SLA
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => router.post(`/tickets/${ticket.id}/sla/pause`, {}, { preserveScroll: true })}
+                            className="flex-1 text-[11px] font-medium py-1 px-2 rounded border border-warning-300 text-warning-700 hover:bg-warning-50 transition-colors">
+                            ⏸ Pause SLA
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -533,6 +641,9 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                             {/* Tags */}
                             <TagPicker ticket={ticket} allTags={allTags} canUpdate={can.update} />
                         </div>
+
+                        {/* SLA */}
+                        <SLAPanel ticket={ticket} canUpdate={can.update} />
 
                         {/* Linked Tickets */}
                         <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">

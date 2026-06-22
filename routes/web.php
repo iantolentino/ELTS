@@ -10,6 +10,7 @@ use App\Http\Controllers\Tickets\TicketSearchController;
 use App\Http\Controllers\Tickets\TicketTagController;
 use App\Http\Controllers\Tickets\TicketWatcherController;
 use App\Http\Controllers\Tickets\TicketAttachmentController;
+use App\Http\Controllers\Tickets\TicketSlaController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CustomFieldController as AdminCustomFieldController;
@@ -21,6 +22,9 @@ use App\Http\Controllers\Admin\StatusController as AdminStatusController;
 use App\Http\Controllers\Admin\TeamController as AdminTeamController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
 use App\Http\Controllers\Admin\MailboxController as AdminMailboxController;
+use App\Http\Controllers\Admin\BusinessHourController as AdminBusinessHourController;
+use App\Http\Controllers\Admin\HolidayController as AdminHolidayController;
+use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
@@ -114,6 +118,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{ticket}/attachments',                   [TicketAttachmentController::class, 'store'])->name('attachments.store');
         Route::get('/{ticket}/attachments/{attachment}/download', [TicketAttachmentController::class, 'download'])->name('attachments.download');
         Route::delete('/{ticket}/attachments/{attachment}',    [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');
+        Route::post('/{ticket}/sla/pause',                     [TicketSlaController::class, 'pause'])->name('sla.pause');
+        Route::post('/{ticket}/sla/resume',                    [TicketSlaController::class, 'resume'])->name('sla.resume');
     });
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
@@ -196,6 +202,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/email-templates',                            [AdminEmailTemplateController::class, 'index'])->name('email-templates.index');
         Route::put('/email-templates/{eventName}',                [AdminEmailTemplateController::class, 'update'])->name('email-templates.update');
         Route::delete('/email-templates/{eventName}',             [AdminEmailTemplateController::class, 'destroy'])->name('email-templates.destroy');
+
+        Route::get('/sla-policies',                [AdminSlaPolicyController::class, 'index'])->name('sla-policies.index');
+        Route::post('/sla-policies',               [AdminSlaPolicyController::class, 'store'])->name('sla-policies.store');
+        Route::put('/sla-policies/{slaPolicy}',    [AdminSlaPolicyController::class, 'update'])->name('sla-policies.update');
+        Route::delete('/sla-policies/{slaPolicy}', [AdminSlaPolicyController::class, 'destroy'])->name('sla-policies.destroy');
+
+        Route::get('/business-hours',  [AdminBusinessHourController::class, 'index'])->name('business-hours.index');
+        Route::put('/business-hours',  [AdminBusinessHourController::class, 'update'])->name('business-hours.update');
+
+        Route::get('/holidays',              [AdminHolidayController::class, 'index'])->name('holidays.index');
+        Route::post('/holidays',             [AdminHolidayController::class, 'store'])->name('holidays.store');
+        Route::delete('/holidays/{holiday}', [AdminHolidayController::class, 'destroy'])->name('holidays.destroy');
     });
 
     Route::get('/users/mention-search', UserMentionController::class)->name('users.mention-search');

@@ -20,6 +20,8 @@ import {
     DocumentDuplicateIcon,
     InboxIcon,
     EnvelopeIcon,
+    ClockIcon,
+    CalendarDaysIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -72,6 +74,9 @@ const navigation: NavGroup[] = [
             { label: 'Permissions',     href: '/admin/permissions',      icon: KeyIcon,                   roles: ['super_admin', 'admin'] },
             { label: 'Mailboxes',       href: '/admin/mailboxes',        icon: InboxIcon,                 roles: ['super_admin', 'admin'] },
             { label: 'Email Templates', href: '/admin/email-templates',  icon: EnvelopeIcon,              roles: ['super_admin', 'admin'] },
+            { label: 'SLA Policies',    href: '/admin/sla-policies',     icon: ClockIcon,                 roles: ['super_admin', 'admin'] },
+            { label: 'Business Hours',  href: '/admin/business-hours',   icon: AdjustmentsHorizontalIcon, roles: ['super_admin', 'admin'] },
+            { label: 'Holidays',        href: '/admin/holidays',          icon: CalendarDaysIcon,          roles: ['super_admin', 'admin'] },
             { label: 'Assets',          href: '/assets',                 icon: ComputerDesktopIcon,       roles: ['super_admin', 'admin', 'agent'] },
             { label: 'Settings',        href: '/settings',               icon: Cog6ToothIcon,             roles: ['super_admin', 'admin'] },
         ],
