@@ -22,6 +22,7 @@ import {
     EnvelopeIcon,
     ClockIcon,
     CalendarDaysIcon,
+    BoltIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -77,6 +78,7 @@ const navigation: NavGroup[] = [
             { label: 'SLA Policies',    href: '/admin/sla-policies',     icon: ClockIcon,                 roles: ['super_admin', 'admin'] },
             { label: 'Business Hours',  href: '/admin/business-hours',   icon: AdjustmentsHorizontalIcon, roles: ['super_admin', 'admin'] },
             { label: 'Holidays',        href: '/admin/holidays',          icon: CalendarDaysIcon,          roles: ['super_admin', 'admin'] },
+            { label: 'Automations',     href: '/admin/automations',       icon: BoltIcon,                  roles: ['super_admin', 'admin'] },
             { label: 'Assets',          href: '/assets',                 icon: ComputerDesktopIcon,       roles: ['super_admin', 'admin', 'agent'] },
             { label: 'Settings',        href: '/settings',               icon: Cog6ToothIcon,             roles: ['super_admin', 'admin'] },
         ],

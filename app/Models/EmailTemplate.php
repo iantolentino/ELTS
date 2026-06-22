@@ -21,7 +21,9 @@ class EmailTemplate extends Model
         'ticket_resolved' => 'Ticket Resolved (sent to requester)',
         'ticket_closed'   => 'Ticket Closed (sent to requester)',
         'ticket_assigned' => 'Ticket Assigned (sent to assignee)',
-        'sla_breached'    => 'SLA Breached (sent to assignee)',
+        'sla_breached'            => 'SLA Breached (sent to assignee)',
+        'automation_notification' => 'Automation Notification (sent to requester)',
+        'ticket_escalated'        => 'Ticket Escalated (sent to supervisors)',
     ];
 
     public static array $variables = [

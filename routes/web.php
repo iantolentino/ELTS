@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\BusinessHourController as AdminBusinessHourContro
 use App\Http\Controllers\Admin\HolidayController as AdminHolidayController;
 use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
+use App\Http\Controllers\Admin\AutomationController as AdminAutomationController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
 use App\Http\Controllers\AvailabilityController;
@@ -214,6 +215,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/holidays',              [AdminHolidayController::class, 'index'])->name('holidays.index');
         Route::post('/holidays',             [AdminHolidayController::class, 'store'])->name('holidays.store');
         Route::delete('/holidays/{holiday}', [AdminHolidayController::class, 'destroy'])->name('holidays.destroy');
+
+        Route::get('/automations',                       [AdminAutomationController::class, 'index'])->name('automations.index');
+        Route::get('/automations/create',                [AdminAutomationController::class, 'create'])->name('automations.create');
+        Route::post('/automations',                      [AdminAutomationController::class, 'store'])->name('automations.store');
+        Route::get('/automations/{automation}/edit',     [AdminAutomationController::class, 'edit'])->name('automations.edit');
+        Route::put('/automations/{automation}',          [AdminAutomationController::class, 'update'])->name('automations.update');
+        Route::delete('/automations/{automation}',       [AdminAutomationController::class, 'destroy'])->name('automations.destroy');
+        Route::patch('/automations/{automation}/toggle', [AdminAutomationController::class, 'toggle'])->name('automations.toggle');
     });
 
     Route::get('/users/mention-search', UserMentionController::class)->name('users.mention-search');

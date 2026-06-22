@@ -35,7 +35,9 @@ app()->booted(function () {
     // P4-04 — Check for SLA breaches and fire SLABreached event
     $schedule->job(new \App\Jobs\CheckSLABreaches)->everyFiveMinutes();
 
+    // P5-09 — Auto-close stale tickets (no activity for 30 days by default)
+    $schedule->command('tickets:auto-close')->daily();
+
     // Placeholder — uncomment as each phase implements the corresponding job:
-    // $schedule->command('tickets:auto-close')->daily();
     // $schedule->command('reports:generate-scheduled')->daily();
 });

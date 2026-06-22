@@ -9,6 +9,7 @@ use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketReplied;
 use App\Events\TicketStatusChanged;
+use App\Jobs\RunAutomationRules;
 use App\Services\SLAService;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -65,6 +66,7 @@ class TicketService
         $ticket = $ticket->refresh();
         TicketCreated::dispatch($ticket);
         $this->slaService->createRecord($ticket);
+        RunAutomationRules::dispatch($ticket, 'ticket_created');
 
         return $ticket;
     }
@@ -123,6 +125,8 @@ class TicketService
             );
         }
 
+        RunAutomationRules::dispatch($updated, 'ticket_status_changed');
+
         return $updated;
     }
 
@@ -166,6 +170,7 @@ class TicketService
         }
 
         TicketReplied::dispatch($ticket, $reply, $actor);
+        RunAutomationRules::dispatch($ticket, 'ticket_replied');
 
         return $reply;
     }

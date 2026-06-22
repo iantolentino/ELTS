@@ -35,6 +35,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_login_ip',
         'team_id',
         'department_id',
+        'skills',
     ];
 
     protected $hidden = [
@@ -52,6 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password'                => 'hashed',
             'is_vip'                  => 'boolean',
             'is_active'               => 'boolean',
+            'skills'                  => 'array',
         ];
     }
 
