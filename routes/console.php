@@ -29,8 +29,10 @@ app()->booted(function () {
     // Prune activity log entries older than ACTIVITY_LOGGER_RETENTION_DAYS (default 365 days)
     $schedule->command('activitylog:clean')->daily();
 
+    // P3-04 — Poll all active IMAP mailboxes and queue processing jobs
+    $schedule->command('mailboxes:poll')->everyTwoMinutes();
+
     // Placeholder — uncomment as each phase implements the corresponding job:
-    // $schedule->job(new \App\Jobs\ProcessIncomingEmail)->everyTwoMinutes();
     // $schedule->job(new \App\Jobs\CheckSLABreaches)->everyFiveMinutes();
     // $schedule->command('tickets:auto-close')->daily();
     // $schedule->command('reports:generate-scheduled')->daily();

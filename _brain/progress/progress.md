@@ -330,23 +330,54 @@
   - Routes: GET /tickets/search + POST /tickets/{ticket}/merge (both before /{ticket} wildcard)
   - TicketController::show(): passes can.merge (class-level policy)
   - Show.tsx: MergeModal component — debounced axios search with loading state, results dropdown, selected target card (green), warning banner explaining what happens, ESC/backdrop to close; ArrowsRightLeftIcon button in header (only when can.merge)
-- [ ] P2-17 — Build parent-child ticket linking UI
-- [ ] P2-18 — Build Admin: Custom status management (create, edit, reorder, set color)
-- [ ] P2-19 — Build Admin: Category & subcategory management (tree editor)
-- [ ] P2-20 — Build Admin: Custom field management (define fields per category)
-- [ ] P2-21 — Build Admin: Ticket template management
-- [ ] P2-22 — Build file attachment upload (drag-drop, preview, size limit enforcement)
-- [ ] P2-23 — Build @mention autocomplete in Tiptap editor
-- [ ] P2-24 — Build activity timeline component (full diff view of all ticket changes)
-- [ ] P2-25 — Feature tests: ticket CRUD, reply, note, bulk actions
+- [x] P2-17 — Build parent-child ticket linking UI
+  - LinkParentRequest (validates not-self, not-child, not-deleted/merged), TicketLinkController (store/destroy), TicketService::linkParent()
+  - Show.tsx: "Linked Tickets" sidebar card with LinkParentModal (debounced search), parent display + unlink, child list as links
+- [x] P2-18 — Build Admin: Custom status management (create, edit, reorder, set color)
+  - CreateStatusRequest + UpdateStatusRequest (name unique, color #RRGGBB regex, sort_order, is_default, is_closed)
+  - Admin/StatusController: store/update clear other defaults in DB transaction; destroy blocks if tickets > 0 or is_default
+  - Pages/Admin/Statuses/Index.tsx: inline create/edit, color picker with preset swatches + native input, DEFAULT/CLOSED badges, tickets count
+- [x] P2-19 — Build Admin: Category & subcategory management (tree editor)
+  - CreateCategoryRequest + UpdateCategoryRequest; Admin/CategoryController (destroy nulls children + ticket category_id)
+  - Pages/Admin/Categories/Index.tsx: CategoryForm with parent select (excludes self+children on edit); renderRow() recursive tree display
+- [x] P2-20 — Build Admin: Custom field management (define fields per category)
+  - CreateCustomFieldRequest (name ^[a-z0-9_]+$, unique; label, type enum, options required for select/radio) + UpdateCustomFieldRequest
+  - Admin/CustomFieldController (destroy deletes values first); Pages/Admin/CustomFields/Index.tsx (auto-name from label, readonly on edit)
+- [x] P2-21 — Build Admin: Ticket template management
+  - CreateTemplateRequest + UpdateTemplateRequest; Admin/TicketTemplateController (CRUD, created_by set on store)
+  - Pages/Admin/Templates/Index.tsx + Create.tsx + Edit.tsx: TiptapEditor body, tag multi-select chips, category/priority selects
+- [x] P2-22 — Build file attachment upload (drag-drop, preview, size limit enforcement)
+  - StoreAttachmentRequest (max size from config ticketing.tickets.max_attachment_size_mb); TicketAttachmentController (store/download/destroy)
+  - TicketService::addAttachment (stores in local disk attachments/{ticket_id}/) + removeAttachment
+  - Show.tsx: drag-and-drop dropzone + file list with humanSize() + download/delete per file
+- [x] P2-23 — Build @mention autocomplete in Tiptap editor
+  - UserMentionController (invokable): searches agents by name/email, returns [{id, label, email}]
+  - MentionList.tsx: forwardRef component with arrow key + Enter navigation
+  - TiptapEditor.tsx: Mention extension with tippy.js popup; MentionExtension with suggestion.items (axios /users/mention-search) + render with createRoot
+- [x] P2-24 — Build activity timeline component (full diff view of all ticket changes)
+  - Show.tsx: activity section with LABEL_KEY_MAP for display names, old→new diff per changed field
+  - Expand/collapse toggle (5 items default, "Show all N / Show less" button)
+- [x] P2-25 — Feature tests: ticket CRUD, reply, note, bulk actions
+  - TicketFactory + TicketStatusFactory created; Ticket + TicketStatus models gain HasFactory
+  - TicketCRUDTest (6 tests), TicketReplyNoteTest (5 tests), BulkActionTest (5 tests)
+  - All 16 tests pass; TicketPolicy corrected (tickets.view_all/own, tickets.note)
 
 ---
 
 ## PHASE 3 — EMAIL INTEGRATION
 **Goal:** Bidirectional email — incoming creates tickets, outgoing notifies users.
 
-- [ ] P3-01 — Migration: mailboxes, incoming_emails tables
-- [ ] P3-02 — Build Mailbox model and MailboxService (IMAP poll via webklex)
+- [x] P3-01 — Migration: mailboxes, incoming_emails tables
+  - mailboxes: name, host, port, encryption enum (ssl/tls/starttls/none), username, password (encrypted cast), mailbox_folder, is_active, last_polled_at, created_by FK nullable
+  - incoming_emails: mailbox_id FK nullable, ticket_id FK nullable, message_id (unique — prevents reprocessing), from_email, from_name, to_email, subject, body_text/html (longtext), attachments (json), status enum (pending/processed/failed/duplicate), failure_reason, received_at, processed_at
+  - Models: Mailbox (encrypted password cast, createdBy/incomingEmails relations), IncomingEmail (array cast on attachments, mailbox/ticket BelongsTo, isPending/isProcessed helpers)
+  - Note: migrations require Laragon running to apply — syntax verified clean
+- [x] P3-02 — Build Mailbox model and MailboxService (IMAP poll via webklex)
+  - MailboxService: testConnection() (connect+disconnect, returns bool), pollMailbox() (fetch unseen messages since last_polled_at, dedup by message_id, store as IncomingEmail records, update last_polled_at), pollAllActive() (loops active mailboxes, swallows per-mailbox failures)
+  - makeClient(): uses ImapClient::make() facade — inherits imap.php options (soft_fail, fetch_body, etc.) and overrides credentials from DB
+  - extractMessageId(): prefers RFC 2822 Message-ID header, falls back to uid-{mailboxId}-{uid}
+  - Attachment metadata ({name, size, mime_type}) stored in JSON; bodies stored as body_text/body_html
+  - Soft fail per message AND per mailbox so one bad email/mailbox never aborts the batch
 - [ ] P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)
 - [ ] P3-04 — Schedule ProcessIncomingEmail every 2 minutes in Kernel.php
 - [ ] P3-05 — Build outgoing email templates (Blade): ticket_created, reply_received, ticket_resolved, ticket_closed, ticket_assigned
@@ -556,6 +587,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 2 — IN PROGRESS
-- Last completed task: P2-16 — Ticket merge UI
-- Next task: P2-17 — Parent-child ticket linking UI
+- Phase: 3 — IN PROGRESS
+- Last completed task: P3-02 — MailboxService (IMAP poll via webklex)
+- Next task: P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)

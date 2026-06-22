@@ -19,6 +19,8 @@ use App\Http\Controllers\Admin\PermissionsController as AdminPermissionsControll
 use App\Http\Controllers\Admin\SessionController as AdminSessionController;
 use App\Http\Controllers\Admin\StatusController as AdminStatusController;
 use App\Http\Controllers\Admin\TeamController as AdminTeamController;
+use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
+use App\Http\Controllers\Admin\MailboxController as AdminMailboxController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
@@ -184,6 +186,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/templates/{template}/edit', [AdminTemplateController::class, 'edit'])->name('templates.edit');
         Route::put('/templates/{template}',      [AdminTemplateController::class, 'update'])->name('templates.update');
         Route::delete('/templates/{template}',   [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
+
+        Route::get('/mailboxes',                         [AdminMailboxController::class, 'index'])->name('mailboxes.index');
+        Route::post('/mailboxes',                        [AdminMailboxController::class, 'store'])->name('mailboxes.store');
+        Route::put('/mailboxes/{mailbox}',               [AdminMailboxController::class, 'update'])->name('mailboxes.update');
+        Route::delete('/mailboxes/{mailbox}',            [AdminMailboxController::class, 'destroy'])->name('mailboxes.destroy');
+        Route::post('/mailboxes/{mailbox}/test',         [AdminMailboxController::class, 'test'])->name('mailboxes.test');
+
+        Route::get('/email-templates',                            [AdminEmailTemplateController::class, 'index'])->name('email-templates.index');
+        Route::put('/email-templates/{eventName}',                [AdminEmailTemplateController::class, 'update'])->name('email-templates.update');
+        Route::delete('/email-templates/{eventName}',             [AdminEmailTemplateController::class, 'destroy'])->name('email-templates.destroy');
     });
 
     Route::get('/users/mention-search', UserMentionController::class)->name('users.mention-search');

@@ -18,6 +18,8 @@ import {
     FolderIcon,
     RectangleStackIcon,
     DocumentDuplicateIcon,
+    InboxIcon,
+    EnvelopeIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
 } from '@heroicons/react/24/outline';
@@ -67,9 +69,11 @@ const navigation: NavGroup[] = [
             { label: 'Categories',    href: '/admin/categories',    icon: FolderIcon,               roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Custom Fields', href: '/admin/custom-fields', icon: RectangleStackIcon,       roles: ['super_admin', 'admin'] },
             { label: 'Templates',     href: '/admin/templates',     icon: DocumentDuplicateIcon,    roles: ['super_admin', 'admin', 'supervisor'] },
-            { label: 'Permissions',   href: '/admin/permissions',   icon: KeyIcon,                  roles: ['super_admin', 'admin'] },
-            { label: 'Assets',        href: '/assets',              icon: ComputerDesktopIcon,      roles: ['super_admin', 'admin', 'agent'] },
-            { label: 'Settings',      href: '/settings',            icon: Cog6ToothIcon,            roles: ['super_admin', 'admin'] },
+            { label: 'Permissions',     href: '/admin/permissions',      icon: KeyIcon,                   roles: ['super_admin', 'admin'] },
+            { label: 'Mailboxes',       href: '/admin/mailboxes',        icon: InboxIcon,                 roles: ['super_admin', 'admin'] },
+            { label: 'Email Templates', href: '/admin/email-templates',  icon: EnvelopeIcon,              roles: ['super_admin', 'admin'] },
+            { label: 'Assets',          href: '/assets',                 icon: ComputerDesktopIcon,       roles: ['super_admin', 'admin', 'agent'] },
+            { label: 'Settings',        href: '/settings',               icon: Cog6ToothIcon,             roles: ['super_admin', 'admin'] },
         ],
     },
     {

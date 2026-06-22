@@ -3,11 +3,11 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 2 IN PROGRESS
+## STATE: EXECUTION_MODE — PHASE 3 NEXT
 
-**Last updated:** 2026-06-21
-**Current phase:** Phase 2 — Ticket Core (IN PROGRESS)
-**Next task:** P2-13 — Tag management: add/remove tags on ticket, tag CRUD in settings
+**Last updated:** 2026-06-22
+**Current phase:** Phase 3 — Email Integration (IN PROGRESS)
+**Next task:** P3-03 — Build ProcessIncomingEmail job (parse email → create ticket or append reply)
 
 ---
 
@@ -118,8 +118,19 @@
 - [x] types/index.d.ts: TicketReply, TicketNote, ActivityEntry, CustomFieldValue, TicketDetail interfaces added
 - [x] Build: 1343 modules, 0 errors
 
+- [x] P2-17 Parent-child linking: LinkParentRequest, TicketLinkController (store/destroy), TicketService::linkParent(); Show.tsx sidebar card with LinkParentModal + unlink
+- [x] P2-18 Admin status CRUD: CreateStatusRequest + UpdateStatusRequest, Admin/StatusController (default-clearing transaction, destroy guards), Pages/Admin/Statuses/Index.tsx (color picker, DEFAULT/CLOSED badges)
+- [x] P2-19 Admin category CRUD: CreateCategoryRequest + UpdateCategoryRequest, Admin/CategoryController (destroy nulls children), Pages/Admin/Categories/Index.tsx (tree display, parent select)
+- [x] P2-20 Admin custom field CRUD: CreateCustomFieldRequest + UpdateCustomFieldRequest, Admin/CustomFieldController (destroy deletes values first), Pages/Admin/CustomFields/Index.tsx (auto-name, type-gated options section)
+- [x] P2-21 Admin template CRUD: CreateTemplateRequest + UpdateTemplateRequest, Admin/TicketTemplateController, Pages/Admin/Templates/{Index,Create,Edit}.tsx (Tiptap + tag chips)
+- [x] P2-22 File attachments: StoreAttachmentRequest (max from config), TicketAttachmentController (upload/download/destroy), TicketService::addAttachment/removeAttachment; Show.tsx drag-drop dropzone + file list
+- [x] P2-23 @mention autocomplete: UserMentionController (/users/mention-search), MentionList.tsx (forwardRef + keyboard nav), TiptapEditor.tsx updated with Mention extension + tippy.js popup
+- [x] P2-24 Activity diff display: Show.tsx activity section with LABEL_KEY_MAP, old→new per changed field, expand/collapse toggle (5 items default)
+- [x] P2-25 Pest tests: TicketFactory + TicketStatusFactory, TicketCRUDTest (6) + TicketReplyNoteTest (5) + BulkActionTest (5) — all 16 pass; TicketPolicy bug fixed (permission names); Sidebar updated with admin nav items (Statuses/Categories/Custom Fields/Templates)
+
 ## ✅ PHASE 0 COMPLETE — All 17 tasks done
 ## ✅ PHASE 1 COMPLETE — All 18 tasks done
+## ✅ PHASE 2 COMPLETE — All 25 tasks done
 
 ---
 
@@ -129,8 +140,8 @@
 |---|---|---|---|
 | P0 Setup | 17 | 17 | 0 |
 | P1 Auth | 18 | 18 | 0 |
-| P2 Tickets | 25 | 12 | 13 |
-| P3 Email | 12 | 0 | 12 |
+| P2 Tickets | 25 | 25 | 0 |
+| P3 Email | 12 | 2 | 10 |
 | P4 SLA | 11 | 0 | 11 |
 | P5 Automation | 10 | 0 | 10 |
 | P6 Canned | 4 | 0 | 4 |
@@ -145,7 +156,7 @@
 | P15 Portal | 6 | 0 | 6 |
 | P16 Tests | 9 | 0 | 9 |
 | P17 Deploy | 9 | 0 | 9 |
-| **TOTAL** | **183** | **0** | **183** |
+| **TOTAL** | **183** | **60** | **123** |
 
 ---
 

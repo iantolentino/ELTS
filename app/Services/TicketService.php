@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Contracts\Repositories\TicketRepositoryInterface;
+use App\Events\TicketAssigned;
+use App\Events\TicketCreated;
+use App\Events\TicketReplied;
+use App\Events\TicketStatusChanged;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketNote;
@@ -56,7 +60,10 @@ class TicketService
             'ticket_number' => $prefix . '-' . str_pad((string) $ticket->id, 5, '0', STR_PAD_LEFT),
         ]);
 
-        return $ticket->refresh();
+        $ticket = $ticket->refresh();
+        TicketCreated::dispatch($ticket);
+
+        return $ticket;
     }
 
     public function updateTicket(Ticket $ticket, array $data): Ticket
@@ -92,7 +99,20 @@ class TicketService
             $updates['closed_at'] = null;
         }
 
-        return $this->ticketRepository->update($ticket, $updates);
+        $wasClosed = (bool) $ticket->status?->is_closed;
+        $updated   = $this->ticketRepository->update($ticket, $updates);
+        $newStatus = TicketStatus::find($statusId);
+
+        // Only fire status change notification on transition (not on every status change)
+        if (!$wasClosed) {
+            TicketStatusChanged::dispatch(
+                $updated->fresh(['status', 'requester']),
+                isNowClosed:   (bool) $newStatus?->is_closed,
+                isNowResolved: !$newStatus?->is_closed && strtolower($newStatus?->name ?? '') === 'resolved',
+            );
+        }
+
+        return $updated;
     }
 
     public function changePriority(Ticket $ticket, string $priority): Ticket
@@ -102,10 +122,20 @@ class TicketService
 
     public function assign(Ticket $ticket, ?int $assigneeId, ?int $teamId): Ticket
     {
-        return $this->ticketRepository->update($ticket, [
+        $previousAssigneeId = $ticket->assignee_id;
+        $updated            = $this->ticketRepository->update($ticket, [
             'assignee_id' => $assigneeId,
             'team_id'     => $teamId,
         ]);
+
+        if ($assigneeId && $assigneeId !== $previousAssigneeId) {
+            $assignee = User::find($assigneeId);
+            if ($assignee) {
+                TicketAssigned::dispatch($updated->fresh(['requester', 'status']), $assignee);
+            }
+        }
+
+        return $updated;
     }
 
     public function addReply(Ticket $ticket, array $data, User $actor): TicketReply
@@ -122,6 +152,8 @@ class TicketService
         if ($ticket->first_response_at === null && $actor->id !== $ticket->requester_id) {
             $this->ticketRepository->update($ticket, ['first_response_at' => now()]);
         }
+
+        TicketReplied::dispatch($ticket, $reply, $actor);
 
         return $reply;
     }
