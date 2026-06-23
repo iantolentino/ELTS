@@ -38,6 +38,6 @@ app()->booted(function () {
     // P5-09 — Auto-close stale tickets (no activity for 30 days by default)
     $schedule->command('tickets:auto-close')->daily();
 
-    // Placeholder — uncomment as each phase implements the corresponding job:
-    // $schedule->command('reports:generate-scheduled')->daily();
+    // P7-13 — Dispatch GenerateScheduledReport jobs for any reports due at this minute
+    $schedule->command('reports:dispatch-scheduled')->everyMinute();
 });

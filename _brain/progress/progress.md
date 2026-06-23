@@ -484,46 +484,152 @@
 ## PHASE 5 — AUTOMATION & WORKFLOWS
 **Goal:** Visual rule builder that auto-handles tickets based on configurable conditions.
 
-- [ ] P5-01 — Migrations: automation_rules, automation_conditions, automation_actions
-- [ ] P5-02 — Build AutomationService: evaluate rules against ticket on create/update events
-- [ ] P5-03 — Build RunAutomationRules job (queued, triggered by ticket events)
-- [ ] P5-04 — Implement action handlers: assign, tag, change priority, change status, send notification, escalate, close
-- [ ] P5-05 — Build Admin: Automation rule list page
-- [ ] P5-06 — Build Admin: Rule builder UI (visual if/then editor with condition + action blocks)
-- [ ] P5-07 — Build round-robin assignment logic in AutomationService
-- [ ] P5-08 — Build skill-based routing (tag-to-agent-skill matching)
-- [ ] P5-09 — Build auto-close stale tickets command (configurable days in settings)
-- [ ] P5-10 — Feature tests: rule evaluation, all action types, round-robin
+- [x] P5-01 — Migrations: automation_rules, automation_conditions, automation_actions
+  - automation_rules: name, description, event enum (5 events), match_type (all/any), is_active, sort_order; compound index on [event, is_active, sort_order]
+  - automation_conditions: automation_rule_id FK (cascadeOnDelete), field(60), operator(30), value(500), sort_order
+  - automation_actions: automation_rule_id FK (cascadeOnDelete), action_type(60), value text nullable, sort_order
+  - 2026_06_22_150003: users.skills json column added (for skill-based routing in P5-08)
+  - Models: AutomationRule (HasFactory, active() scope, conditions/actions HasMany), AutomationCondition, AutomationAction (both BelongsTo rule)
+- [x] P5-02 — Build AutomationService: evaluate rules against ticket on create/update events
+  - evaluate(Ticket, event): loads active rules for event ordered by sort_order, tests each rule's conditions, applies actions if matched
+  - matchesConditions(): match_type=all requires every condition true; any requires at least one
+  - evaluateCondition(): 8 operators — equals, not_equals, contains, not_contains, starts_with, ends_with, is_empty, is_not_empty
+  - extractField(): maps 10 ticket fields — status, priority, category, tag, subject, description, requester_email, assignee, team, source, is_vip
+- [x] P5-03 — Build RunAutomationRules job (queued, triggered by ticket events)
+  - RunAutomationRules job: ShouldQueue, 3 tries, 30s backoff; guards against trashed tickets
+  - TicketService wired: dispatches RunAutomationRules on ticket_created, ticket_status_changed, ticket_replied
+- [x] P5-04 — Implement action handlers: assign, tag, change priority, change status, send notification, escalate, close
+  - 11 action types: assign_to, assign_round_robin, assign_by_skill, add_tag, remove_tag, change_status (handles closed_at), change_priority, send_notification (SendTicketEmail dispatch), add_note ('[Automation]' prefix), close (finds first is_closed status), escalate (priority→critical + email all supervisors)
+  - Per-action try/catch logs warning on failure without aborting remaining actions
+- [x] P5-05 — Build Admin: Automation rule list page
+  - Admin/Automations/Index.tsx: table with event badge, match_type, condition count, action count, active toggle, edit/delete links
+  - AutomationRulePolicy: viewAny/create/update/delete → automation.manage permission (auto-discovered)
+  - Sidebar: "Automations" entry (BoltIcon, super_admin/admin)
+- [x] P5-06 — Build Admin: Rule builder UI (visual if/then editor with condition + action blocks)
+  - Admin/Automations/Edit.tsx: form with name/description/event/match_type/is_active; condition rows (field select + operator select + value input); action rows (action_type select + value input); add/remove row buttons
+  - AutomationController: index/create/store/edit/update/destroy/toggle; syncConditionsAndActions() helper; DELETE+recreate on update
+  - Routes: GET/POST /admin/automations, GET/PUT/DELETE /admin/automations/{automation}, PATCH /admin/automations/{automation}/toggle
+- [x] P5-07 — Build round-robin assignment logic in AutomationService
+  - actionAssignRoundRobin(): prefers online/busy agents; falls back to all agents; picks agent with fewest open (non-closed) tickets via aggregated subquery
+- [x] P5-08 — Build skill-based routing (tag-to-agent-skill matching)
+  - actionAssignBySkill(): matches ticket tag names (lowercased) against agent skills[] (lowercased); among matching agents picks least-loaded by open tickets; falls back to round-robin if no match or no tags
+  - users.skills json column added via 2026_06_22_150003 migration; User model $casts updated
+- [x] P5-09 — Build auto-close stale tickets command (configurable days in settings)
+  - AutoCloseStaleTickets command: signature tickets:auto-close --days=30; chunkById(100); sets closed status + creates '[Auto-close]' internal note; reports count
+  - Scheduled daily in routes/console.php
+- [x] P5-10 — Feature tests: rule evaluation, all action types, round-robin
+  - AutomationRuleFactory: forEvent(), matchAny(), inactive() states
+  - AutomationTest.php (14 tests): equals/not-match/contains/is_empty/any-match conditions; change_priority/change_status/add_tag/remove_tag/add_note/close/assign_round_robin/assign_by_skill actions; inactive rule skipped
+
+---
+
+## ✅ PHASE 5 COMPLETE — All 10 tasks done
 
 ---
 
 ## PHASE 6 — CANNED RESPONSES
 **Goal:** Agents can save and reuse reply templates.
 
-- [ ] P6-01 — Migration: canned_responses table (title, body, scope: global/team/personal)
-- [ ] P6-02 — Build CannedResponse CRUD (admin: global/team, agent: personal)
-- [ ] P6-03 — Build canned response selector in Tiptap editor (search + insert)
-- [ ] P6-04 — Variable support in canned responses: {{client_name}}, {{ticket_id}}, {{agent_name}}
+- [x] P6-01 — Migration: canned_responses table (title, body, scope: global/team/personal)
+  - canned_responses: title(200), body text, scope enum (global/team/personal default global), user_id nullable FK (nullOnDelete, personal scope), team_id nullable FK (nullOnDelete, team scope), is_active; index [scope, is_active]
+  - CannedResponse model: $fillable, is_active bool cast, user()/team() BelongsTo, scopeVisibleTo(User) — shows global + matching team + own personal
+- [x] P6-02 — Build CannedResponse CRUD (admin: global/team, agent: personal)
+  - CannedResponsePolicy: view/create/update/delete → canned_responses.* permissions (auto-discovered)
+  - Admin/CannedResponseController: index (grouped by scope), store, update, destroy
+  - Admin/CannedResponses/Index.tsx: create form with scope select (team select shown when scope=team, user select shown when scope=personal), title, body textarea; inline edit rows; delete confirm; scope badge
+- [x] P6-03 — Build canned response selector in Tiptap editor (search + insert)
+  - CannedResponseSearchController (invokable): GET /canned-responses/search?q=&ticket_id=; scopeVisibleTo filter; limit 20; returns id/title/scope/body (interpolated if ticket_id provided)
+  - CannedResponsePicker.tsx: debounced search input, results list with scope badge, click inserts interpolated body into editor
+  - TiptapEditor.tsx: BookmarkIcon toolbar button opens/closes CannedResponsePicker panel below toolbar
+- [x] P6-04 — Variable support in canned responses: {{client_name}}, {{ticket_id}}, {{agent_name}}
+  - CannedResponseSearchController::interpolate(): replaces {{client_name}}, {{ticket_id}}, {{ticket_number}}, {{agent_name}} when ticket context is provided
+
+---
+
+## ✅ PHASE 6 COMPLETE — All 4 tasks done
 
 ---
 
 ## PHASE 7 — REPORTS & ANALYTICS
 **Goal:** Rich dashboard + custom report builder + scheduled exports.
 
-- [ ] P7-01 — Build ReportService with all metric calculation methods
-- [ ] P7-02 — Build main dashboard page: KPI cards (open tickets, avg resolution time, SLA compliance %, CSAT score)
-- [ ] P7-03 — Build ticket volume trend chart (line chart, daily/weekly/monthly toggle)
-- [ ] P7-04 — Build first response time chart (bar chart per agent/team)
-- [ ] P7-05 — Build SLA compliance gauge chart
-- [ ] P7-06 — Build agent performance scorecard table (tickets handled, avg resolution, CSAT, SLA compliance)
-- [ ] P7-07 — Build team comparison bar chart
-- [ ] P7-08 — Build ticket breakdown charts (by priority, by status, by category — pie/donut)
-- [ ] P7-09 — Build custom report builder page (metric selector, date range, group by, filter)
-- [ ] P7-10 — Build PDF export (DomPDF — dashboard snapshot + custom report)
-- [ ] P7-11 — Build Excel/CSV export (maatwebsite/excel)
-- [ ] P7-12 — Build scheduled report configuration (pick report, schedule, recipient emails)
-- [ ] P7-13 — Build GenerateScheduledReport job (render + attach + email)
-- [ ] P7-14 — Feature tests: metric calculations, export generation
+- [x] P7-01 — Build ReportService with all metric calculation methods
+  - kpiSummary(from, to): ticket_volume, open_tickets, avg_first_response_minutes, avg_resolution_minutes, sla_compliance_pct
+  - ticketVolumeTrend(from, to, groupBy): date-filled series (day/week/month) with human-readable labels
+  - firstResponseByAgent / firstResponseByTeam: avg_minutes + count per agent/team
+  - slaCompliancePct(from, to): overall % compliance; slaCompliance(): full breakdown (total/fr_breached/res_breached/compliant)
+  - agentPerformance(from, to): per-agent tickets_handled/avg_resolution/avg_first_response/sla_compliance_pct
+  - teamComparison(from, to): per-team tickets_handled/avg_resolution
+  - ticketsByPriority / ticketsByStatus / ticketsByCategory: count breakdowns
+  - customReport(params): flexible metric×groupBy query with filters (priority/status/category/assignee/team)
+  - formatMinutes(float): static helper — converts minutes to "2h 15m" display string
+- [x] P7-02 — Build main dashboard page: KPI cards (open tickets, avg resolution time, SLA compliance %, CSAT score)
+  - DashboardController (invokable): from/to/granularity params → kpiSummary + ticketVolumeTrend via ReportService
+  - Route updated: GET /dashboard → DashboardController (replaces closure)
+  - Recharts installed (recharts package)
+  - Dashboard/Index.tsx: date-range + granularity filter bar (Apply button); 5 KPI cards (open/new/avg-first-response/avg-resolution/SLA); AreaChart trend (Recharts) with gradient fill, zero-gap labels, empty state; SLA card color-coded green/amber/red by threshold
+- [x] P7-03 — Build ticket volume trend chart (line chart, daily/weekly/monthly toggle)
+  - Implemented as part of P7-02: AreaChart on dashboard with day/week/month granularity selector, zero-filled gaps, human-readable labels
+- [x] P7-04 — Build first response time chart (bar chart per agent/team)
+  - ReportsController: GET /reports with from/to/group_by params; firstResponseByAgent or firstResponseByTeam via ReportService
+  - Route: GET /reports → reports.index (auth+verified)
+  - Reports/Index.tsx: date filter bar; "First Response Time" section with agent↔team toggle (immediate router.get); Recharts BarChart with per-bar color cycle, angled X labels, minute-formatted Y axis, custom tooltip; sortable summary table below chart
+- [x] P7-05 — Build SLA compliance gauge chart
+  - ReportsController: sla_compliance added via ReportService::slaCompliance()
+  - SlaGauge component: Recharts PieChart as semicircle (startAngle=180→0), inner radius donut, colour-coded green/amber/red by threshold (≥90/≥70/<70), centre label with % + "compliant" subtitle
+  - 4-stat grid: total SLA tickets, fully compliant, first-response breached, resolution breached
+  - Empty state when no SLA records exist for period
+- [x] P7-06 — Build agent performance scorecard table (tickets handled, avg resolution, CSAT, SLA compliance)
+  - ReportsController: agent_performance added via ReportService::agentPerformance()
+  - Reports/Index.tsx: sortable scorecard table — agent name, tickets handled, avg first response, avg resolution, SLA % (color-coded green/amber/red), CSAT (— until Phase 9)
+  - tabular-nums alignment, hover row highlight, empty state
+- [x] P7-07 — Build team comparison bar chart
+  - ReportsController: team_comparison added via ReportService::teamComparison()
+  - Reports/Index.tsx: dual-axis BarChart — left axis tickets resolved (indigo), right axis avg resolution time (violet, minute-formatted); angled X labels; custom tooltip formats minutes; manual legend below chart; empty state
+- [x] P7-08 — Build ticket breakdown charts (by priority, by status, by category — pie/donut)
+  - ReportsController: by_priority, by_status, by_category passed from ReportService
+  - Reports/Index.tsx: reusable DonutChart component (donut + legend with percentages); priority uses semantic colors (critical=red, high=orange, medium=amber, low=green); status uses is_closed flag (green=closed, palette for open); category uses 10-color palette; 3-column responsive grid
+- [x] P7-09 — Build custom report builder page (metric selector, date range, group by, filter)
+  - ReportsController::custom() — date range, metric (volume/avg_resolution), group_by (day/week/month/priority/status/category/agent/team), 5 optional filters (priority/status/category/agent/team); passes statuses/categories/agents/teams select options to frontend
+  - Route: GET /reports/custom → reports.custom
+  - Pages/Reports/Custom.tsx: parameter panel (4-col core + 5-col filter grid, active-filter indicator, Clear Filters button); BarChart with time/count Y-axis switching; results table with total footer; empty state
+  - Sidebar.tsx: "Custom Report" nav item added (PresentationChartLineIcon, supervisor+ roles)
+- [x] P7-10 — Build PDF export (DomPDF — dashboard snapshot + custom report)
+  - ReportsController::exportPdf() → GET /reports/export/pdf → overview-pdf.blade.php (KPIs, ticket breakdown, SLA compliance, agent performance)
+  - ReportsController::exportCustomPdf() → GET /reports/custom/export/pdf → custom-pdf.blade.php (results table with % column + total footer, filter chips)
+  - Both Blade views: DejaVu Sans font, inline CSS, DomPDF-compatible table layout, A4 portrait
+  - Reports/Index.tsx: "PDF" download link button (ArrowDownTrayIcon) appended to filter bar
+  - Reports/Custom.tsx: "Export PDF" download link (ArrowDownTrayIcon) at right end of actions row
+- [x] P7-11 — Build Excel/CSV export (maatwebsite/excel)
+  - app/Exports/CustomReportExport.php: FromArray + WithHeadings + WithTitle + ShouldAutoSize; 5 columns (group label, count, % of total, avg resolution min, avg resolution formatted); total footer row
+  - app/Exports/OverviewReportExport.php: single sheet with labeled sections (KPIs, SLA, by priority, by status, by category, agent performance)
+  - ReportsController: exportOverviewExcel(), exportExcel(), exportCsv() — shared filter logic extracted into private resolveCustomParams()
+  - Routes: GET /reports/export/excel, /reports/custom/export/excel, /reports/custom/export/csv
+  - Reports/Index.tsx: "Excel" download button added next to PDF button
+  - Reports/Custom.tsx: PDF/Excel/CSV export buttons grouped in actions row (ml-auto)
+- [x] P7-12 — Build scheduled report configuration (pick report, schedule, recipient emails)
+  - Migration: scheduled_reports (name, type, format, schedule, day_of_week, day_of_month, time_of_day, recipients JSON, params JSON, is_active, created_by FK)
+  - Model: ScheduledReport (recipients/params cast to array, creator BelongsTo)
+  - Policy: ScheduledReportPolicy (viewAny=admin/supervisor, create/update/delete=admin only)
+  - Request: ScheduledReportRequest (resolvedRecipients() strips invalid emails from newline/comma input)
+  - Controller: Admin\ScheduledReportController (index/create/store/edit/update/destroy/toggle — 7 routes)
+  - Pages/Admin/ScheduledReports/Index.tsx: table with type/format badges, schedule label, active toggle, edit/delete actions
+  - Pages/Admin/ScheduledReports/Create.tsx + Edit.tsx: wrap shared Form.tsx
+  - Pages/Admin/ScheduledReports/Form.tsx: conditional custom params section (when type=custom), conditional day selector (weekly/monthly), recipients textarea, active toggle
+  - Sidebar: "Scheduled Reports" nav item (CalendarDaysIcon, Resources group, admin+supervisor)
+  - NOTE: migration pending MySQL start (php artisan migrate)
+- [x] P7-13 — Build GenerateScheduledReport job (render + attach + email)
+  - app/Console/Commands/DispatchScheduledReports.php — artisan reports:dispatch-scheduled; runs every minute, checks H:i + day_of_week/day_of_month against active scheduled reports, dispatches jobs for due ones
+  - app/Jobs/GenerateScheduledReport.php — ShouldQueue, 3 tries, 120s timeout; computes date range (daily=yesterday, weekly=last week, monthly=last month); builds PDF via DomPDF or Excel/CSV via Excel::raw(); sends ScheduledReportMail to each recipient
+  - app/Mail/ScheduledReportMail.php — subject includes report name + date range; attaches file content via Attachment::fromData(); uses emails.scheduled-report view
+  - resources/views/emails/scheduled-report.blade.php — extends emails.layout; shows report name, period, type, format, schedule
+  - routes/console.php — reports:dispatch-scheduled scheduled everyMinute()
+- [x] P7-14 — Feature tests: metric calculations, export generation
+  - tests/Feature/Reports/ReportMetricsTest.php — 10 tests: kpiSummary zero state + date filtering, ticketVolumeTrend zero-fill + day counts, ticketsByPriority grouping + range, slaCompliancePct null, slaCompliance zero state, formatMinutes parametric (7 cases) + null
+  - tests/Feature/Reports/ReportExportTest.php — access control (admin/supervisor OK, client forbidden, guest redirects) + assertDownload for all 5 export routes
+  - tests/Feature/Reports/ScheduledReportTest.php — index access, store/update/delete CRUD, toggle active, DispatchScheduledReports dispatches for due active reports, skips inactive + not-yet-due reports
+  - database/factories/ScheduledReportFactory.php — created; ScheduledReport model updated with HasFactory trait
+  - NOTE: Tests require MySQL running + `php artisan migrate` to create scheduled_reports table before execution
 
 ---
 
@@ -660,6 +766,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 3 — IN PROGRESS
-- Last completed task: P4-11 — SLA feature tests (17 tests, all passing)
-- Next task: P5-01 — Build Automation: trigger/condition/action engine schema + migrations
+- Phase: 6 — COMPLETE (synced from other machine)
+- Last completed task: P6-04 — Canned response variable interpolation
+- Next task: P7-01 — Build ReportService with all metric calculation methods

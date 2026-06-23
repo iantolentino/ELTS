@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
 use App\Http\Controllers\Tickets\TicketNoteController;
@@ -28,6 +30,7 @@ use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\AutomationController as AdminAutomationController;
 use App\Http\Controllers\Admin\CannedResponseController as AdminCannedResponseController;
+use App\Http\Controllers\Admin\ScheduledReportController as AdminScheduledReportController;
 use App\Http\Controllers\CannedResponseSearchController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
@@ -96,7 +99,14 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', fn () => Inertia::render('Dashboard/Index'))->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/reports',                     [ReportsController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export/pdf',          [ReportsController::class, 'exportPdf'])->name('reports.export.pdf');
+    Route::get('/reports/export/excel',        [ReportsController::class, 'exportOverviewExcel'])->name('reports.export.excel');
+    Route::get('/reports/custom',              [ReportsController::class, 'custom'])->name('reports.custom');
+    Route::get('/reports/custom/export/pdf',   [ReportsController::class, 'exportCustomPdf'])->name('reports.custom.export.pdf');
+    Route::get('/reports/custom/export/excel', [ReportsController::class, 'exportExcel'])->name('reports.custom.export.excel');
+    Route::get('/reports/custom/export/csv',   [ReportsController::class, 'exportCsv'])->name('reports.custom.export.csv');
 
     Route::prefix('tickets')->name('tickets.')->group(function () {
         Route::get('/',                                        [TicketController::class, 'index'])->name('index');
@@ -225,6 +235,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/automations/{automation}',          [AdminAutomationController::class, 'update'])->name('automations.update');
         Route::delete('/automations/{automation}',       [AdminAutomationController::class, 'destroy'])->name('automations.destroy');
         Route::patch('/automations/{automation}/toggle', [AdminAutomationController::class, 'toggle'])->name('automations.toggle');
+
+        Route::get('/scheduled-reports',                              [AdminScheduledReportController::class, 'index'])->name('scheduled-reports.index');
+        Route::get('/scheduled-reports/create',                       [AdminScheduledReportController::class, 'create'])->name('scheduled-reports.create');
+        Route::post('/scheduled-reports',                             [AdminScheduledReportController::class, 'store'])->name('scheduled-reports.store');
+        Route::get('/scheduled-reports/{scheduledReport}/edit',       [AdminScheduledReportController::class, 'edit'])->name('scheduled-reports.edit');
+        Route::put('/scheduled-reports/{scheduledReport}',            [AdminScheduledReportController::class, 'update'])->name('scheduled-reports.update');
+        Route::delete('/scheduled-reports/{scheduledReport}',         [AdminScheduledReportController::class, 'destroy'])->name('scheduled-reports.destroy');
+        Route::patch('/scheduled-reports/{scheduledReport}/toggle',   [AdminScheduledReportController::class, 'toggle'])->name('scheduled-reports.toggle');
 
         Route::get('/canned-responses',                          [AdminCannedResponseController::class, 'index'])->name('canned-responses.index');
         Route::post('/canned-responses',                         [AdminCannedResponseController::class, 'store'])->name('canned-responses.store');

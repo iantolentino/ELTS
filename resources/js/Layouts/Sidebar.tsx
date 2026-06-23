@@ -3,6 +3,7 @@ import {
     HomeIcon,
     TicketIcon,
     ChartBarIcon,
+    PresentationChartLineIcon,
     BookOpenIcon,
     UsersIcon,
     UserGroupIcon,
@@ -59,7 +60,9 @@ const navigation: NavGroup[] = [
         group: 'Resources',
         items: [
             { label: 'Knowledge Base', href: '/kb', icon: BookOpenIcon, roles: ['super_admin', 'admin', 'supervisor', 'agent', 'client'] },
-            { label: 'Reports', href: '/reports', icon: ChartBarIcon, roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Reports',            href: '/reports',                    icon: ChartBarIcon,             roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Custom Report',      href: '/reports/custom',             icon: PresentationChartLineIcon, roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'Scheduled Reports',  href: '/admin/scheduled-reports',    icon: CalendarDaysIcon,          roles: ['super_admin', 'admin', 'supervisor'] },
         ],
     },
     {
