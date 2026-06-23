@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\Tickets\TicketController;
 use App\Http\Controllers\Tickets\TicketReplyController;
@@ -30,6 +31,8 @@ use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\AutomationController as AdminAutomationController;
 use App\Http\Controllers\Admin\CannedResponseController as AdminCannedResponseController;
+use App\Http\Controllers\Admin\KnowledgeArticleController as AdminKnowledgeArticleController;
+use App\Http\Controllers\Admin\KnowledgeCategoryController as AdminKnowledgeCategoryController;
 use App\Http\Controllers\Admin\ScheduledReportController as AdminScheduledReportController;
 use App\Http\Controllers\CannedResponseSearchController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -49,6 +52,16 @@ use App\Http\Controllers\Auth\TwoFactorSetupController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Public routes (no authentication required)
+|--------------------------------------------------------------------------
+*/
+Route::get('/kb',                                  [KnowledgeBaseController::class, 'index'])->name('kb.index');
+Route::get('/kb/search',                           [KnowledgeBaseController::class, 'searchSuggest'])->name('kb.search');
+Route::get('/kb/articles/{slug}',                  [KnowledgeBaseController::class, 'show'])->name('kb.articles.show');
+Route::post('/kb/articles/{slug}/feedback',        [KnowledgeBaseController::class, 'feedback'])->name('kb.articles.feedback');
 
 /*
 |--------------------------------------------------------------------------
@@ -243,6 +256,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/scheduled-reports/{scheduledReport}',            [AdminScheduledReportController::class, 'update'])->name('scheduled-reports.update');
         Route::delete('/scheduled-reports/{scheduledReport}',         [AdminScheduledReportController::class, 'destroy'])->name('scheduled-reports.destroy');
         Route::patch('/scheduled-reports/{scheduledReport}/toggle',   [AdminScheduledReportController::class, 'toggle'])->name('scheduled-reports.toggle');
+
+        Route::get('/kb/categories',                         [AdminKnowledgeCategoryController::class, 'index'])->name('kb.categories.index');
+        Route::post('/kb/categories',                        [AdminKnowledgeCategoryController::class, 'store'])->name('kb.categories.store');
+        Route::put('/kb/categories/{knowledgeCategory}',     [AdminKnowledgeCategoryController::class, 'update'])->name('kb.categories.update');
+        Route::delete('/kb/categories/{knowledgeCategory}',  [AdminKnowledgeCategoryController::class, 'destroy'])->name('kb.categories.destroy');
+
+        Route::get('/kb/articles',                          [AdminKnowledgeArticleController::class, 'index'])->name('kb.articles.index');
+        Route::get('/kb/articles/create',                   [AdminKnowledgeArticleController::class, 'create'])->name('kb.articles.create');
+        Route::post('/kb/articles',                         [AdminKnowledgeArticleController::class, 'store'])->name('kb.articles.store');
+        Route::get('/kb/articles/{knowledgeArticle}/edit',  [AdminKnowledgeArticleController::class, 'edit'])->name('kb.articles.edit');
+        Route::put('/kb/articles/{knowledgeArticle}',       [AdminKnowledgeArticleController::class, 'update'])->name('kb.articles.update');
+        Route::delete('/kb/articles/{knowledgeArticle}',    [AdminKnowledgeArticleController::class, 'destroy'])->name('kb.articles.destroy');
 
         Route::get('/canned-responses',                          [AdminCannedResponseController::class, 'index'])->name('canned-responses.index');
         Route::post('/canned-responses',                         [AdminCannedResponseController::class, 'store'])->name('canned-responses.store');

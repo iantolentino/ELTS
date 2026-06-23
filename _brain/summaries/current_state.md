@@ -3,13 +3,14 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 7 COMPLETE
+## STATE: EXECUTION_MODE — PHASE 8 IN PROGRESS
 
-**Last updated:** 2026-06-23
-**Last completed:** P7-14 — Feature tests: metric calculations, export generation, scheduled report CRUD + dispatch
-**Current phase:** Phase 7 — Reports & Analytics (COMPLETE)
-**Next task:** P8-01 — Migrations: knowledge_categories, knowledge_articles tables
-**Pending migration:** `php artisan migrate` (scheduled_reports table) — requires MySQL running before test suite
+**Last updated:** 2026-06-24
+**Last completed:** P9-01 — Migrations: csat_surveys, nps_surveys tables + models + factories
+**Current phase:** Phase 9 — Customer Satisfaction / CSAT + NPS (IN PROGRESS)
+**Next task:** P9-02 — Build SendCSATSurvey job (dispatched with 1hr delay on ticket resolved)
+**Pending migrations:** `php artisan migrate` (scheduled_reports + knowledge_* + csat_surveys + nps_surveys) — requires MySQL running
+**Pending migrations:** `php artisan migrate` (scheduled_reports + knowledge_categories + knowledge_articles) — requires MySQL running
 
 ---
 

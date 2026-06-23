@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Button, Input } from '@/Components/UI';
 import TiptapEditor from '@/Components/editor/TiptapEditor';
+import KbSuggestions from '@/Components/KB/KbSuggestions';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import type { TicketStatus, TicketCategory } from '@/types';
 
@@ -66,6 +67,7 @@ export default function Create({ statuses, categories, agents, teams, customFiel
                             placeholder="Brief summary of the issue…"
                             error={errors.subject}
                         />
+                        <KbSuggestions query={data.subject} />
                     </div>
 
                     {/* Description */}

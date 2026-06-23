@@ -636,21 +636,73 @@
 ## PHASE 8 — KNOWLEDGE BASE
 **Goal:** Self-service Help Center with article management and ticket suggestions.
 
-- [ ] P8-01 — Migrations: knowledge_categories, knowledge_articles tables
-- [ ] P8-02 — Build public Knowledge Base index page (categories, search, no login required)
-- [ ] P8-03 — Build public article view page (full content, feedback buttons)
-- [ ] P8-04 — Build Admin: article editor (Tiptap, category assign, public/private toggle, publish/draft)
-- [ ] P8-05 — Build Admin: KB category management
-- [ ] P8-06 — Build article full-text search (MySQL FULLTEXT index)
-- [ ] P8-07 — Build suggested articles on ticket create form (keyword match to article titles)
-- [ ] P8-08 — Build article feedback endpoint (helpful / not helpful vote)
+- [x] P8-01 — Migrations: knowledge_categories, knowledge_articles tables
+  - database/migrations/2026_06_24_001000_create_knowledge_categories_table.php — id, name, slug(unique), description, icon, parent_id(self-ref nullable), sort_order, is_active, created_by, timestamps; indexes on parent_id/is_active/sort_order
+  - database/migrations/2026_06_24_001001_create_knowledge_articles_table.php — id, knowledge_category_id(cascade), author_id(nullable), title, slug(unique), excerpt, content(longText), status enum(draft,published), is_public, view/helpful/not_helpful counts, published_at, timestamps; FULLTEXT on (title,content) for P8-06
+  - app/Models/KnowledgeCategory.php — HasFactory, fillable, casts, parent/children/articles/creator relations
+  - app/Models/KnowledgeArticle.php — HasFactory, fillable, casts, category/author relations, isPublished() helper
+  - database/factories/KnowledgeCategoryFactory.php — unique slug via Str::slug
+  - database/factories/KnowledgeArticleFactory.php — published() and private() states
+- [x] P8-02 — Build public Knowledge Base index page (categories, search, no login required)
+  - app/Http/Controllers/KnowledgeBaseController.php — index(): categories with published_article_count + children on no-query; LIKE title/excerpt search with limit 30 when ?q= provided
+  - resources/js/Layouts/PublicLayout.tsx — sticky header with logo, "Dashboard" link for auth users, "Sign in" for guests, footer
+  - resources/js/Pages/KnowledgeBase/Index.tsx — conditionally uses AppLayout (auth) or PublicLayout (guest); hero gradient with SearchBar; CategoryCard grid (icon, counts, subcategory list); ArticleRow list for search results; empty states for both
+  - routes/web.php — public GET /kb → kb.index (outside all middleware groups)
+  - Build: 0 errors
+- [x] P8-03 — Build public article view page (full content, feedback buttons)
+  - KnowledgeBaseController@show — fetch by slug (published+public+published_at), increment view_count via DB::table, eager-load category+author, return 5 related articles by helpful_count
+  - KnowledgeBaseController@feedback — POST; match vote to increment helpful_count or not_helpful_count via DB::table; returns JSON
+  - resources/js/Pages/KnowledgeBase/Show.tsx — breadcrumb nav, article title+meta (author/date/views), HTML content via dangerouslySetInnerHTML, FeedbackSection (fetch POST with CSRF, optimistic count update, voted state), related articles sticky sidebar
+  - Routes: GET /kb/articles/{slug} → kb.articles.show; POST /kb/articles/{slug}/feedback → kb.articles.feedback (both public)
+  - Build: 0 errors
+- [x] P8-04 — Build Admin: article editor (Tiptap, category assign, public/private toggle, publish/draft)
+  - app/Policies/KnowledgeArticlePolicy.php — viewAny: any staff role; create/update: admin/supervisor; delete: admin only
+  - app/Http/Requests/Admin/KnowledgeArticleRequest.php — validates category, title, slug (unique ignore self), excerpt, content, status, is_public
+  - app/Http/Controllers/Admin/KnowledgeArticleController.php — index/create/store/edit/update/destroy; store sets published_at=now() on first publish; update preserves published_at if already published
+  - Pages/Admin/KnowledgeBase/Articles/Form.tsx — 2-col layout (content left, settings panel right); TiptapEditor for content; auto-slugify from title; category select; status select; is_public checkbox with hint
+  - Pages/Admin/KnowledgeBase/Articles/Index.tsx — table with status badge, 🔒 private indicator, view/edit/delete actions, client-side title+category filter
+  - Pages/Admin/KnowledgeBase/Articles/Create.tsx + Edit.tsx — breadcrumb + AppLayout wrappers
+  - Routes: 6 admin routes under /admin prefix (kb.articles.*)
+  - Sidebar: "KB Articles" link added (admin/supervisor only)
+  - Build: 0 errors
+- [x] P8-05 — Build Admin: KB category management
+  - app/Policies/KnowledgeCategoryPolicy.php — viewAny: admin/supervisor; create/update/delete: admin only
+  - app/Http/Requests/Admin/KnowledgeCategoryRequest.php — validates name, slug (unique ignore self), description, icon, parent_id (not self), sort_order, is_active
+  - app/Http/Controllers/Admin/KnowledgeCategoryController.php — index (withCount published/total), store, update, destroy (promotes children to top-level before delete)
+  - Pages/Admin/KnowledgeBase/Categories/Index.tsx — table with parent/article-count/order/active columns; slide-over CategoryPanel for create + edit with auto-slug, emoji icon, parent select (top-level only), sort_order, is_active toggle
+  - Routes: 4 admin routes (kb.categories.*)
+  - Sidebar: "KB Categories" link added (admin only)
+  - Build: 0 errors
+- [x] P8-06 — Build article full-text search (MySQL FULLTEXT index)
+  - app/Services/KnowledgeSearchService.php — search(): FULLTEXT MATCH/AGAINST in Boolean Mode with prefix wildcard (+word*) for queries ≥3 chars; falls back to LIKE on short queries or empty FULLTEXT result; suggest(): title-only LIKE for typeahead (lightweight, 8 results)
+  - booleanQuery() helper sanitises user input, strips MySQL boolean operators, appends * to each word
+  - KnowledgeBaseController@index — now injects KnowledgeSearchService; delegates search to service
+  - KnowledgeBaseController@searchSuggest — new JSON endpoint returning {id, title, slug, excerpt, category_name}
+  - Route: GET /kb/search → kb.search (public, used by P8-07 ticket suggestion widget)
+  - FULLTEXT index was already created in P8-01 migration on (title, content)
+  - Build: 0 errors (PHP-only change)
+- [x] P8-07 — Build suggested articles on ticket create form (keyword match to article titles)
+  - resources/js/Components/KB/KbSuggestions.tsx — debounced (400ms) fetch to GET /kb/search?q= on subject change; AbortController cancels in-flight requests; shows up to 5 results in a blue-tinted panel below the subject input; dismiss (×) button resets when query prefix changes; "Searching…" loading state; each result opens article in new tab
+  - Pages/Tickets/Create.tsx — imports KbSuggestions, renders <KbSuggestions query={data.subject} /> immediately after the Subject Input
+  - Build: 0 errors
+- [x] P8-08 — Build article feedback endpoint (helpful / not helpful vote)
+  - KnowledgeBaseController@feedback — session key kb_vote_{id}; returns 409 with {already_voted, vote} if session key exists; on new vote increments DB count + stores vote in session; returns {success, vote}
+  - KnowledgeBaseController@show — passes user_vote from session to page prop
+  - Pages/KnowledgeBase/Show.tsx — FeedbackSection accepts initialVote prop; voted state initialised from it (persists across page loads); handles 409 response gracefully (shows voted state without double-counting)
+  - Build: 0 errors
 
 ---
 
 ## PHASE 9 — CUSTOMER SATISFACTION (CSAT + NPS)
 **Goal:** Automated satisfaction measurement tied to ticket lifecycle.
 
-- [ ] P9-01 — Migrations: csat_surveys, nps_surveys tables
+- [x] P9-01 — Migrations: csat_surveys, nps_surveys tables
+  - 2026_06_24_002000_create_csat_surveys_table.php — ticket_id(cascade), user_id(nullable nullOnDelete), email, token(64 unique), score tinyint unsigned nullable (1–5), comment, sent_at, responded_at; indexes on ticket_id/user_id/score/responded_at
+  - 2026_06_24_002001_create_nps_surveys_table.php — user_id(nullable nullOnDelete), email, token(64 unique), score tinyint unsigned nullable (0–10), comment, sent_at, responded_at
+  - app/Models/CsatSurvey.php — HasFactory, casts, ticket/user relations, isExpired() (reads ticketing.satisfaction.survey_token_expiry_days), hasResponded()
+  - app/Models/NpsSurvey.php — HasFactory, casts, user relation, isExpired(), hasResponded(), category() → promoter/passive/detractor
+  - database/factories/CsatSurveyFactory.php — responded(score) state
+  - database/factories/NpsSurveyFactory.php — responded(score) state
 - [ ] P9-02 — Build SendCSATSurvey job (dispatched with 1hr delay on ticket resolved)
 - [ ] P9-03 — Build CSAT response page (public, no login — token-based URL)
 - [ ] P9-04 — Build NPS survey email + response page (periodic, token-based)
