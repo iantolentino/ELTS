@@ -7,6 +7,7 @@ namespace App\Listeners;
 use App\Events\SLABreached;
 use App\Jobs\SendTicketEmail;
 use App\Models\TicketNote;
+use App\Notifications\SLABreachedNotification;
 
 class SendSLABreachNotification
 {
@@ -24,7 +25,7 @@ class SendSLABreachNotification
             'is_html'   => true,
         ]);
 
-        // Email: send breach alert to the assignee
+        // Email + in-app: alert the assignee
         if ($ticket->assignee) {
             SendTicketEmail::dispatch(
                 ticket:          $ticket,
@@ -33,6 +34,8 @@ class SendSLABreachNotification
                 recipientName:   $ticket->assignee->name,
                 extra:           ['sla_type' => $type, 'sla_label' => $label],
             );
+
+            $ticket->assignee->notify(new SLABreachedNotification($ticket, $type));
         }
     }
 }

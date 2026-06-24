@@ -14,11 +14,30 @@ export interface Flash {
     error: string | null;
 }
 
+export interface AppNotificationData {
+    title?:  string;
+    body?:   string;
+    url?:    string;
+    event?:  string;
+}
+
+export interface AppNotification {
+    id:         string;
+    type:       string;
+    data:       AppNotificationData;
+    read_at:    string | null;
+    created_at: string;
+}
+
 export interface SharedProps {
     auth: {
         user: AuthUser | null;
     };
     flash: Flash;
+    notifications: {
+        unread_count: number;
+        recent:       AppNotification[];
+    };
 }
 
 export interface PaginationLink {

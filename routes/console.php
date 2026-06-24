@@ -20,14 +20,15 @@ Artisan::command('inspire', function () {
 |   P4-04  — CheckSLABreaches         (every 5 minutes)
 |   P5-09  — auto-close stale tickets (daily)
 |   P7-13  — GenerateScheduledReport  (daily / custom)
-|   P11    — activitylog:clean        (daily — ACTIVE)
+|   P11-06 — logs:prune               (daily — replaces activitylog:clean)
 */
 
 app()->booted(function () {
     $schedule = app(Schedule::class);
 
-    // Prune activity log entries older than ACTIVITY_LOGGER_RETENTION_DAYS (default 365 days)
-    $schedule->command('activitylog:clean')->daily();
+    // P11-06 — Prune activity_log + login_histories using admin-configured retention days
+    // Replaces the built-in activitylog:clean (which used a fixed env var and didn't cover login_histories)
+    $schedule->command('logs:prune')->daily();
 
     // P3-04 — Poll all active IMAP mailboxes and queue processing jobs
     $schedule->command('mailboxes:poll')->everyTwoMinutes();

@@ -16,6 +16,8 @@ use App\Http\Controllers\Tickets\TicketTagController;
 use App\Http\Controllers\Tickets\TicketWatcherController;
 use App\Http\Controllers\Tickets\TicketAttachmentController;
 use App\Http\Controllers\Tickets\TicketSlaController;
+use App\Http\Controllers\Tickets\TicketAssetController;
+use App\Http\Controllers\Assets\AssetSearchController;
 use App\Http\Controllers\Admin\TagController as AdminTagController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CustomFieldController as AdminCustomFieldController;
@@ -33,9 +35,15 @@ use App\Http\Controllers\Admin\SlaPolicyController as AdminSlaPolicyController;
 use App\Http\Controllers\Admin\TicketTemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\AutomationController as AdminAutomationController;
 use App\Http\Controllers\Admin\CannedResponseController as AdminCannedResponseController;
+use App\Http\Controllers\Admin\AssetController as AdminAssetController;
+use App\Http\Controllers\Admin\AssetAssignmentController as AdminAssetAssignmentController;
+use App\Http\Controllers\Admin\AssetStatusController as AdminAssetStatusController;
 use App\Http\Controllers\Admin\KnowledgeArticleController as AdminKnowledgeArticleController;
 use App\Http\Controllers\Admin\KnowledgeCategoryController as AdminKnowledgeCategoryController;
 use App\Http\Controllers\Admin\ScheduledReportController as AdminScheduledReportController;
+use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
+use App\Http\Controllers\Admin\RetentionController as AdminRetentionController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CannedResponseSearchController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
@@ -154,7 +162,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{ticket}/attachments/{attachment}',    [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');
         Route::post('/{ticket}/sla/pause',                     [TicketSlaController::class, 'pause'])->name('sla.pause');
         Route::post('/{ticket}/sla/resume',                    [TicketSlaController::class, 'resume'])->name('sla.resume');
+        Route::post('/{ticket}/assets/{asset}',                [TicketAssetController::class, 'store'])->name('assets.attach');
+        Route::delete('/{ticket}/assets/{asset}',              [TicketAssetController::class, 'destroy'])->name('assets.detach');
     });
+
+    Route::get('/assets/search', AssetSearchController::class)->name('assets.search');
 
     Route::get('/profile',           [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',         [ProfileController::class, 'update'])->name('profile.update');
@@ -265,6 +277,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/scheduled-reports/{scheduledReport}',         [AdminScheduledReportController::class, 'destroy'])->name('scheduled-reports.destroy');
         Route::patch('/scheduled-reports/{scheduledReport}/toggle',   [AdminScheduledReportController::class, 'toggle'])->name('scheduled-reports.toggle');
 
+        Route::get('/audit-logs',             [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('/audit-logs/export/csv', [AdminAuditLogController::class, 'exportCsv'])->name('audit-logs.export.csv');
+        Route::get('/audit-logs/export/pdf', [AdminAuditLogController::class, 'exportPdf'])->name('audit-logs.export.pdf');
+
+        Route::get('/retention',      [AdminRetentionController::class, 'index'])->name('retention.index');
+        Route::post('/retention',     [AdminRetentionController::class, 'update'])->name('retention.update');
+        Route::post('/retention/run', [AdminRetentionController::class, 'runNow'])->name('retention.run');
+
         Route::get('/kb/categories',                         [AdminKnowledgeCategoryController::class, 'index'])->name('kb.categories.index');
         Route::post('/kb/categories',                        [AdminKnowledgeCategoryController::class, 'store'])->name('kb.categories.store');
         Route::put('/kb/categories/{knowledgeCategory}',     [AdminKnowledgeCategoryController::class, 'update'])->name('kb.categories.update');
@@ -277,11 +297,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/kb/articles/{knowledgeArticle}',       [AdminKnowledgeArticleController::class, 'update'])->name('kb.articles.update');
         Route::delete('/kb/articles/{knowledgeArticle}',    [AdminKnowledgeArticleController::class, 'destroy'])->name('kb.articles.destroy');
 
+        Route::get('/assets',                   [AdminAssetController::class, 'index'])->name('assets.index');
+        Route::get('/assets/create',            [AdminAssetController::class, 'create'])->name('assets.create');
+        Route::post('/assets',                  [AdminAssetController::class, 'store'])->name('assets.store');
+        Route::get('/assets/{asset}',           [AdminAssetController::class, 'show'])->name('assets.show');
+        Route::get('/assets/{asset}/edit',      [AdminAssetController::class, 'edit'])->name('assets.edit');
+        Route::put('/assets/{asset}',           [AdminAssetController::class, 'update'])->name('assets.update');
+        Route::delete('/assets/{asset}',        [AdminAssetController::class, 'destroy'])->name('assets.destroy');
+        Route::post('/assets/{asset}/assign',    [AdminAssetAssignmentController::class, 'store'])->name('assets.assign');
+        Route::delete('/assets/{asset}/assign',  [AdminAssetAssignmentController::class, 'destroy'])->name('assets.unassign');
+        Route::patch('/assets/{asset}/status',   [AdminAssetStatusController::class, 'update'])->name('assets.status.update');
+
         Route::get('/canned-responses',                          [AdminCannedResponseController::class, 'index'])->name('canned-responses.index');
         Route::post('/canned-responses',                         [AdminCannedResponseController::class, 'store'])->name('canned-responses.store');
         Route::put('/canned-responses/{cannedResponse}',         [AdminCannedResponseController::class, 'update'])->name('canned-responses.update');
         Route::delete('/canned-responses/{cannedResponse}',      [AdminCannedResponseController::class, 'destroy'])->name('canned-responses.destroy');
     });
+
+    Route::get('/notifications',                   [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all',         [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::patch('/notifications/{id}/read',       [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::delete('/notifications/{id}',           [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
     Route::get('/users/mention-search',        UserMentionController::class)->name('users.mention-search');
     Route::get('/canned-responses/search',     CannedResponseSearchController::class)->name('canned-responses.search');

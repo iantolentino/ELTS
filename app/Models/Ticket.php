@@ -117,6 +117,11 @@ class Ticket extends Model
         return $this->hasMany(TicketWatcher::class);
     }
 
+    public function assets(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class, 'ticket_assets');
+    }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(TicketAttachment::class);

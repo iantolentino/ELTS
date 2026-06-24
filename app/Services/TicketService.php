@@ -10,6 +10,7 @@ use App\Events\TicketCreated;
 use App\Events\TicketReplied;
 use App\Events\TicketStatusChanged;
 use App\Jobs\RunAutomationRules;
+use App\Notifications\MentionedInTicketNotification;
 use App\Services\SLAService;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -177,12 +178,24 @@ class TicketService
 
     public function addNote(Ticket $ticket, array $data, User $actor): TicketNote
     {
-        return TicketNote::create([
+        $note = TicketNote::create([
             'ticket_id' => $ticket->id,
             'user_id'   => $actor->id,
             'body'      => $data['body'],
             'is_html'   => true,
         ]);
+
+        // Notify @mentioned users in notes
+        preg_match_all('/data-id=["\'](\d+)["\']/', $data['body'], $matches);
+        $mentionedIds = array_map('intval', array_unique($matches[1]));
+        if (count($mentionedIds) > 0) {
+            User::whereIn('id', $mentionedIds)
+                ->where('id', '!=', $actor->id)
+                ->get()
+                ->each(fn (User $u) => $u->notify(new MentionedInTicketNotification($ticket, $actor)));
+        }
+
+        return $note;
     }
 
     public function bulkAction(array $ticketIds, string $action, array $data, User $actor): int

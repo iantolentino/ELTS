@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\LoginHistoryService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class LoginHistoryController extends Controller
     {
         abort_unless($request->user()->hasPermissionTo('audit.view'), 403);
 
-        $filters = $request->only(['search', 'status', 'date_from', 'date_to', 'per_page']);
+        $filters = $request->only(['search', 'status', 'date_from', 'date_to', 'per_page', 'user_id']);
 
         $entries = $this->loginHistoryService->paginate($filters);
 
@@ -33,6 +34,8 @@ class LoginHistoryController extends Controller
                 'created_at' => $e->created_at->toISOString(),
             ]),
             'filters' => $filters,
+            'users'   => User::orderBy('name')->get(['id', 'name']),
+            'total'   => $entries->total(),
         ]);
     }
 }

@@ -735,34 +735,133 @@
 ## PHASE 10 — ASSET MANAGEMENT
 **Goal:** Asset inventory with ticket linking and lifecycle tracking.
 
-- [ ] P10-01 — Migrations: assets, asset_assignments tables
-- [ ] P10-02 — Build Asset list page (searchable, filterable by type/status/assignee)
-- [ ] P10-03 — Build Asset show page (details, assignment history, linked tickets)
-- [ ] P10-04 — Build Asset create/edit form
-- [ ] P10-05 — Build asset assignment to user (with history log)
-- [ ] P10-06 — Build asset-ticket linking on ticket create/edit form
-- [ ] P10-07 — Build asset lifecycle status management (purchased/in-use/maintenance/retired)
+- [x] P10-01 — Migrations: assets, asset_assignments tables
+  - 2026_06_24_003000_create_assets_table.php — id, name, asset_tag(unique), type(60), status enum(purchased/in_use/maintenance/retired), serial_number(unique nullable), make, model, purchase_date, purchase_price(decimal), warranty_expires_at, location, notes, assigned_to(FK users nullable nullOnDelete), created_by(FK users nullable nullOnDelete); indexes on type/status/assigned_to
+  - 2026_06_24_003001_create_asset_assignments_table.php — asset_id(cascade), user_id(nullable nullOnDelete), assigned_by(nullable nullOnDelete), assigned_at, returned_at(nullable), notes; indexes on [asset_id,assigned_at] and user_id
+  - 2026_06_24_003002_create_ticket_assets_table.php — composite PK(ticket_id, asset_id) with cascade deletes on both sides
+  - app/Models/Asset.php — HasFactory; assignee/creator BelongsTo, assignments HasMany (latest first), tickets BelongsToMany; isWarrantyExpired() helper
+  - app/Models/AssetAssignment.php — HasFactory; asset/user/assignedBy BelongsTo; isActive() helper
+  - database/factories/AssetFactory.php — inUse/purchased/maintenance/retired states
+  - app/Models/Ticket.php — assets() BelongsToMany via ticket_assets added
+- [x] P10-02 — Build Asset list page (searchable, filterable by type/status/assignee)
+  - app/Policies/AssetPolicy.php — viewAny/view → assets.view; create → assets.create; update → assets.edit; delete → assets.delete; assign → assets.assign (auto-discovered)
+  - app/Http/Controllers/Admin/AssetController.php — index(): Gate::authorize viewAny; search (name/asset_tag/serial/make/model LIKE), type/status/assignee_id filters; sortable (name/asset_tag/type/status/created_at); paginate 25 with withQueryString; passes types (distinct), agents list, can flags
+  - resources/js/Pages/Admin/Assets/Index.tsx — filter bar (search input, type/status/assignee selects, Search/Clear buttons); sortable table (asset_tag mono, name+make/model sub-line, type, StatusBadge, assignee, location, warranty with ⚠ expired indicator); row click navigates to show; edit pencil button; pagination
+  - routes/web.php — GET /admin/assets → admin.assets.index
+  - Sidebar.tsx — Assets nav item (ServerStackIcon, super_admin/admin/supervisor/agent)
+- [x] P10-03 — Build Asset show page (details, assignment history, linked tickets)
+  - AssetController::show() — Gate::authorize view; eager-loads assignee/creator/assignments(user+assignedBy, latest first)/tickets(status+requester); passes full asset map + can flags
+  - resources/js/Pages/Admin/Assets/Show.tsx — two-column layout; left: DetailRow grid (type/make-model/serial/location/purchase-date+price/warranty with expired warning/added+by/notes); Assignment History table (4-col: assigned-to/by/at/returned, current row highlighted green with "Current" badge); right: Current Assignee card with initials avatar + reassign link; Linked Tickets list (ticket number/subject/status badge/date as clickable cards → /tickets/{id})
+  - routes/web.php — GET /admin/assets/{asset} → admin.assets.show
+- [x] P10-04 — Build Asset create/edit form
+  - app/Http/Requests/Admin/AssetRequest.php — authorize via create/update policy; validates name, asset_tag (unique ignore self), type, status enum, serial_number (unique ignore self), make, model, purchase_date, purchase_price (numeric 0–9999999.99), warranty_expires_at, location, notes, assigned_to (exists:users)
+  - AssetController: create() (Gate authorize), store() (merge created_by, redirect to show), edit() (Gate authorize, pass asset map), update() (redirect to show), destroy() (detach tickets first, delete, redirect to index)
+  - resources/js/Pages/Admin/Assets/Form.tsx — 4 cards: Identity (name/asset_tag/type with datalist/status/serial/location), Hardware Details (make/model/purchase date+price/warranty), Assignment (user select), Notes (textarea); Back arrow + Save/Cancel buttons
+  - resources/js/Pages/Admin/Assets/Create.tsx + Edit.tsx — AppLayout wrappers; Edit pre-fills all fields + passes assetId for back-link and submit URL
+  - routes/web.php — GET create, POST store, GET {asset}/edit, PUT {asset}, DELETE {asset}
+- [x] P10-05 — Build asset assignment to user (with history log)
+  - app/Services/AssetService.php — assign() (DB transaction: close prior open assignment if different user, create AssetAssignment, update asset.assigned_to + status=in_use), unassign() (close active assignment, clear assigned_to), syncAssignment() (delegates to assign/unassign based on new vs old value)
+  - app/Http/Controllers/Admin/AssetAssignmentController.php — store(): Gate assign, validates user_id+notes, calls assetService->assign(); destroy(): Gate assign, guards already-unassigned, calls assetService->unassign()
+  - AssetController updated: constructor injects AssetService; store() calls assetService->assign() after create if assigned_to provided; update() calls assetService->syncAssignment() then updates non-assignment fields via array_diff_key; show() now passes agents list
+  - resources/js/Pages/Admin/Assets/Show.tsx — AssignPanel component (form: user select + notes input + Assign/Cancel buttons); AssetShow: showAssignPanel state + unassign useForm; Current Assignee card: "Reassign/Assign to user" toggle button + "Return Asset" delete button (when assigned); AssignPanel slides in below buttons on toggle
+  - routes/web.php — POST /admin/assets/{asset}/assign → admin.assets.assign; DELETE /admin/assets/{asset}/assign → admin.assets.unassign
+- [x] P10-06 — Build asset-ticket linking on ticket create/edit form
+  - app/Http/Controllers/Assets/AssetSearchController.php (invokable) — GET /assets/search?q=&exclude[]=; Gate::authorize viewAny; searches name/asset_tag/serial_number LIKE, excludes already-linked IDs, returns 15 results
+  - app/Http/Controllers/Tickets/TicketAssetController.php — store(): Gate update ticket + view asset, syncWithoutDetaching; destroy(): Gate update, detach; both return back()
+  - CreateTicketRequest updated: asset_ids[] + asset_ids.* exist:assets,id rules added
+  - TicketController::store() — attaches asset_ids after ticket creation via $ticket->assets()->sync()
+  - TicketController::show() — eager loads assets:id,name,asset_tag,type,status; passes assets[] to page; adds can.link_asset flag
+  - routes/web.php — POST/DELETE /tickets/{ticket}/assets/{asset} (tickets.assets.attach/detach); GET /assets/search (assets.search) outside tickets group
+  - resources/js/Pages/Tickets/Show.tsx — AssetLinker sidebar card: lists linked assets with status badge + hover × detach; "+ Link" button toggles search panel; debounced axios search to /assets/search; click result calls router.post to attach; ServerStackIcon + ASSET_STATUS_COLORS map
+  - resources/js/Pages/Admin/Assets/Form.tsx — fixed stray double-quote in placeholder (build error)
+  - resources/js/Pages/Tickets/Create.tsx — AssetPicker component: debounced search, click-to-add, × to remove, mirrors selected to data.asset_ids[]; renders below Custom Fields, before VIP checkbox
+- [x] P10-07 — Build asset lifecycle status management (purchased/in-use/maintenance/retired)
+  - app/Services/AssetService.php — changeStatus(): DB transaction; if moving to maintenance/retired and asset is assigned, calls unassign() first (auto-return), then updates asset.status
+  - app/Http/Controllers/Admin/AssetStatusController.php — PATCH /admin/assets/{asset}/status; Gate::authorize update; validates status enum; guards same-status no-op; calls assetService->changeStatus(); humanised success flash
+  - routes/web.php — PATCH /admin/assets/{asset}/status → admin.assets.status.update
+  - resources/js/Pages/Admin/Assets/Show.tsx — StatusPanel component: 4 pill-button selector (purchased/in_use/maintenance/retired); selected pill highlights with its color; amber warning banner if changing away from in_use while assigned (explains auto-return); "Change to X" submit button only appears when status changed; wired into right column between Assignee and Linked Tickets cards (shown only when can.edit)
 
 ---
 
 ## PHASE 11 — AUDIT LOGS
 **Goal:** Complete tamper-evident audit trail across all system actions.
 
-- [ ] P11-01 — Configure spatie/laravel-activitylog on all key models via Observers
-- [ ] P11-02 — Build Admin: Audit log viewer page (filterable by user, action, model, date range)
-- [ ] P11-03 — Build ticket change history diff viewer (before/after per field)
-- [ ] P11-04 — Build login history viewer (admin: all users, user: own)
-- [ ] P11-05 — Build audit log export (CSV/PDF)
-- [ ] P11-06 — Build Admin: Data retention policy settings (archive/delete logs after X days)
+- [x] P11-01 — Configure spatie/laravel-activitylog on all key models via Observers
+  - Ticket model already had LogsActivity (P2-24)
+  - Added LogsActivity trait + getActivitylogOptions() to: User (log_name=user; name/email/is_active/availability_status/job_title/team_id/department_id), Asset (log_name=asset; name/asset_tag/type/status/assigned_to/location/serial_number), Team (log_name=team; name/description/department_id/is_active), Department (log_name=department; name/description/is_active), KnowledgeArticle (log_name=knowledge; title/slug/status/is_public/knowledge_category_id/author_id), SlaPolicy (log_name=sla; name/priority/first_response_minutes/resolution_minutes/uses_business_hours/is_active), AutomationRule (log_name=automation; name/event/match_type/is_active/sort_order)
+  - All use logOnlyDirty() + dontSubmitEmptyLogs() — only records actual field changes
+- [x] P11-02 — Build Admin: Audit log viewer page (filterable by user, action, model, date range)
+  - app/Policies/AuditLogPolicy.php — viewAny → audit.view permission; registered via Gate::policy(Activity::class) in AppServiceProvider
+  - app/Http/Controllers/Admin/AuditLogController.php — index(): filters by log_name (inLog), event, causer_id (causedBy), date range, free-text search; paginates 50; maps to {id, log_name, description, event, subject_type (basename), subject_id, subject_link, causer, changes, old, created_at}; subject links mapped for Ticket/Asset/User/Team/Department/KnowledgeArticle/AutomationRule
+  - routes/web.php — GET /admin/audit-logs → admin.audit-logs.index
+  - resources/js/Pages/Admin/AuditLog/Index.tsx — filter bar (search, model select, event select, user select, date range); LogRow with expandable diff (before/after per field in 3-col grid); event badge (green/blue/red) + log_name badge (per-model color); subject link; pagination; entry count in header
+  - Sidebar.tsx — Audit Logs href updated from /audit to /admin/audit-logs
+- [x] P11-03 — Build ticket change history diff viewer (before/after per field)
+  - TicketController::show() — replaced raw activity map with enrichActivity() private method; builds lookup maps (TicketStatus, Team, TicketCategory, User) then resolves IDs to names; adds event field and created_at_diff
+  - resolveActivityValue() — maps status_id/assignee_id/team_id/category_id to human-readable names; handles null as "Unassigned"/"No team"/"None"; ucfirst for priority; raw cast for other fields
+  - ActivityEntry interface updated: removed changes/old raw records; added event, diffs[]{field/old/new}, created_at_diff
+  - Removed LABEL_KEY_MAP constant from Show.tsx (replaced by server-side resolution)
+  - ChangeHistoryPanel component: per-entry expand/collapse toggle via Set<number> state; event badge (green/blue/red); actor + description; full-date title on hover; 3-col grid diff table (Field/Before/After) with red strikethrough before + green after; show-all/show-less toggle at 8+ events
+  - Replaced old activity section with &lt;ChangeHistoryPanel activity={ticket.activity} /&gt;
+  - Build: 0 errors
+- [x] P11-04 — Build login history viewer (admin: all users, user: own)
+  - Core admin + profile views already existed from P1-16 (Admin/LoginHistory/Index.tsx, Profile/LoginHistory.tsx)
+  - LoginHistoryService::paginate() — added user_id filter; when user_id present, scopes query to that user before other filters
+  - Admin/LoginHistoryController::index() — now accepts user_id in $filters; passes users[] list (all users for dropdown) and total count to Inertia
+  - Admin/LoginHistory/Index.tsx — full rewrite: matches Phase 11 surface-card aesthetic; added user select dropdown (filters by specific user); user names link to /admin/users/{id}/edit; entry count in header; Clear filters button with FunnelIcon; Link-based pagination; empty filter values stripped from URL
+  - Sidebar.tsx — added FingerPrintIcon import; added "Login History" nav entry at /admin/login-history in Developer group (between Active Sessions and Audit Logs)
+  - Build: 0 errors
+- [x] P11-05 — Build audit log export (CSV/PDF)
+  - AuditLogController refactored: filter logic extracted into buildFilteredQuery(Request): Builder to avoid duplication between index/export methods
+  - exportCsv(): Gate::authorize; limit 5000 rows; response()->stream() with fputcsv; columns: Time/User/Event/Model/Subject ID/Description/Changes (field: old → new; pairs)
+  - exportPdf(): Gate::authorize; limit 500 rows; maps Activity to display array; DomPDF loadView('admin.audit-log-pdf') landscape A4; truncation flag passed when at limit
+  - resources/views/admin/audit-log-pdf.blade.php: DejaVu Sans; styled table with per-event badge colors (green/blue/red), model badge; active filter chips; truncation notice at 500 rows; generated timestamp footer
+  - routes/web.php: GET /admin/audit-logs/export/csv → admin.audit-logs.export.csv; GET /admin/audit-logs/export/pdf → admin.audit-logs.export.pdf
+  - AuditLog/Index.tsx: exportUrl() helper builds URL with current filter state as query params; CSV + PDF download links in header (ArrowDownTrayIcon); both respect active filters
+  - Build: 0 errors
+- [x] P11-06 — Build Admin: Data retention policy settings (archive/delete logs after X days)
+  - config/ticketing.php: added 'retention' section with activity_log_days (default 90) and login_history_days (default 180); both env-backed
+  - .env + .env.example: RETENTION_ACTIVITY_LOG_DAYS + RETENTION_LOGIN_HISTORY_DAYS added
+  - app/Console/Commands/PruneLogs.php: 'logs:prune' command; reads settings from storage/app/retention_settings.json (with config fallback); deletes from activity_log and login_histories; --dry-run option; writes last-run stats to retention_last_run.json
+  - routes/console.php: replaced activitylog:clean with logs:prune daily (covers both tables with admin-configured days)
+  - app/Http/Controllers/Admin/RetentionController.php: index() passes settings/lastRun/row-counts to Inertia; update() validates and persists to JSON file; runNow() calls Artisan::call('logs:prune')
+  - resources/js/Pages/Admin/Retention/Index.tsx: stat cards (activity count / login count); last-prune banner; settings form (number inputs for each retention period, save button); scheduled prune info card with "Run now" button
+  - routes/web.php: GET/POST /admin/retention (index/update), POST /admin/retention/run (runNow)
+  - Sidebar.tsx: ArchiveBoxXMarkIcon imported; "Data Retention" nav item added to Developer group (super_admin/admin)
+  - Build: 0 errors
 
 ---
 
 ## PHASE 12 — NOTIFICATIONS
 **Goal:** Multi-channel notifications with per-user preference control.
 
-- [ ] P12-01 — Migration: notifications table (Laravel built-in)
-- [ ] P12-02 — Build in-app notification center UI (bell icon, unread count, notification list, mark all read)
-- [ ] P12-03 — Wire notifications: ticket assigned, reply received, @mention, SLA warning, SLA breach
+- [x] P12-01 — Migration: notifications table (Laravel built-in)
+  - Ran: php artisan notifications:table → created 2026_06_24_053849_create_notifications_table.php
+  - Schema: uuid PK, type (string), notifiable morphs, data (text), read_at (nullable timestamp), timestamps
+  - Migrated: php artisan migrate — notifications table + 7 previously-pending migrations applied (knowledge_categories, knowledge_articles, csat_surveys, nps_surveys, assets, asset_assignments, ticket_assets)
+  - Enables Laravel's database notification channel for P12-02 (in-app notification center)
+- [x] P12-02 — Build in-app notification center UI (bell icon, unread count, notification list, mark all read)
+  - NotificationController: index() paginated (20/page, filter=all|unread), markRead(), markAllRead() (bulk UPDATE), destroy()
+  - HandleInertiaRequests: shared notifications.unread_count (lazy count) + notifications.recent (lazy latest 5)
+  - types/index.d.ts: AppNotificationData + AppNotification interfaces; SharedProps.notifications added
+  - Components/NotificationPanel.tsx: popover with recent 5 notifications, unread blue dot, mark-read button, mark-all-read, "View all" footer, empty state
+  - Topbar.tsx: bell button wired with red badge (capped 99+), NotificationPanel imported; user menu closes when notif opens
+  - Pages/Notifications/Index.tsx: filter tabs All/Unread, notification list with hover actions (mark read + delete), pagination, empty state
+  - routes/web.php: GET /notifications, POST /notifications/read-all, PATCH /notifications/{id}/read, DELETE /notifications/{id}
+  - Build: 0 errors
+- [x] P12-03 — Wire notifications: ticket assigned, reply received, @mention, SLA warning, SLA breach
+  - Migration: add first_response_warning_sent + resolution_warning_sent booleans to sla_records
+  - Events/SLAWarning.php: new event (Ticket + SlaRecord + type)
+  - Notifications/: TicketAssignedNotification, ReplyReceivedNotification, MentionedInTicketNotification, SLAWarningNotification, SLABreachedNotification — all via database channel
+  - Listeners/SendSLAWarningNotification.php: new listener, notifies assignee via SLAWarningNotification
+  - CheckSLABreaches job: added checkFirstResponseWarnings() + checkResolutionWarnings() at 75% threshold with isAt75Percent() helper; dispatches SLAWarning event
+  - SlaRecord model: first_response_warning_sent + resolution_warning_sent added to $fillable and $casts
+  - SendTicketNotification listener: handleTicketAssigned notifies assignee (TicketAssignedNotification); handleTicketReplied notifies requester + watchers (ReplyReceivedNotification) + extracts mention IDs from HTML (regex on data-id) and notifies mentioned users (MentionedInTicketNotification)
+  - SendSLABreachNotification listener: also sends SLABreachedNotification to assignee
+  - TicketService::addNote(): parses data-id from note HTML body, notifies @mentioned users (MentionedInTicketNotification)
+  - AppServiceProvider: SLAWarning event → SendSLAWarningNotification registered
+  - NotificationPanel.tsx + Pages/Notifications/Index.tsx: notifMeta() helper maps event → icon + color (TicketIcon, ChatBubbleLeftIcon, AtSymbolIcon, ClockIcon, ExclamationTriangleIcon)
+  - Build: 0 errors
 - [ ] P12-04 — Build notification preferences page (user can toggle each event on/off per channel)
 - [ ] P12-05 — Implement browser push notifications (Web Push API + service worker)
 
@@ -839,6 +938,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 9 — COMPLETE
-- Last completed task: P9-06 — CSAT per-agent and per-team breakdown table
-- Next task: P10-01 — Migrations: assets, asset_assignments tables
+- Phase: 11 — IN PROGRESS
+- Last completed task: P11-05 — Build audit log export (CSV/PDF)
+- Next task: P11-06 — Build Admin: Data retention policy settings (archive/delete logs after X days)

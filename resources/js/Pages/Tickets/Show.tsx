@@ -8,6 +8,7 @@ import {
     LockClosedIcon, TrashIcon, PlusIcon, XMarkIcon, BellIcon, BellSlashIcon,
     ArrowsRightLeftIcon, MagnifyingGlassIcon, CheckCircleIcon,
     LinkIcon, PaperClipIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronUpIcon,
+    ServerStackIcon,
 } from '@heroicons/react/24/outline';
 import type { TicketStatus, TicketTag } from '@/types';
 
@@ -17,8 +18,8 @@ interface AgentMin  { id: number; name: string; }
 interface LinkedTicket { id: number; ticket_number: string; subject: string; }
 interface Attachment { id: number; filename: string; mime_type: string; size: number; user: { name: string }; created_at: string; }
 interface ActivityEntry {
-    id: number; description: string; causer: { name: string } | null;
-    changes: Record<string, unknown>; old: Record<string, unknown>; created_at: string;
+    id: number; event: string | null; description: string; causer: { name: string } | null;
+    diffs: { field: string; old: string; new: string }[]; created_at: string; created_at_diff: string;
 }
 interface TicketReplyData { id: number; user: UserMin; body: string; is_html: boolean; cc: string[] | null; created_at: string; }
 interface TicketNoteData  { id: number; user: UserMin; body: string; is_html: boolean; created_at: string; }
@@ -51,13 +52,14 @@ interface TicketData {
     replies: TicketReplyData[]; notes: TicketNoteData[];
     activity: ActivityEntry[]; custom_field_values: CFValue[];
     sla: SlaData | null;
+    assets: { id: number; name: string; asset_tag: string; type: string; status: string }[];
 }
 
 interface Perms {
     reply: boolean; note_internal: boolean; assign: boolean;
     change_status: boolean; change_priority: boolean; update: boolean;
     watch: boolean; merge: boolean; delete: boolean;
-    link: boolean; attach: boolean;
+    link: boolean; attach: boolean; link_asset: boolean;
 }
 
 interface Props {
@@ -71,10 +73,6 @@ interface Props {
 
 const PRIORITIES  = ['critical', 'high', 'medium', 'low'] as const;
 const SELECT_CLS  = 'w-full border border-[--color-border] rounded-lg px-3 py-2 text-sm bg-white text-[--color-text] focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none';
-const LABEL_KEY_MAP: Record<string, string> = {
-    status_id: 'status', assignee_id: 'assignee', team_id: 'team',
-    category_id: 'category', priority: 'priority', subject: 'subject',
-};
 
 interface SearchResult { id: number; ticket_number: string; subject: string; status: { name: string; color: string }; }
 
@@ -276,6 +274,122 @@ function TagPicker({ ticket, allTags, canUpdate }: { ticket: TicketData; allTags
     );
 }
 
+/* ─── AssetLinker ────────────────────────────────────────────────────────── */
+const ASSET_STATUS_COLORS: Record<string, string> = {
+    purchased:   'bg-blue-100 text-blue-700',
+    in_use:      'bg-green-100 text-green-700',
+    maintenance: 'bg-amber-100 text-amber-700',
+    retired:     'bg-gray-100 text-gray-500',
+};
+
+interface AssetResult { id: number; name: string; asset_tag: string; type: string; status: string; }
+
+function AssetLinker({ ticket, canLink }: { ticket: TicketData; canLink: boolean }) {
+    const [query, setQuery]         = useState('');
+    const [results, setResults]     = useState<AssetResult[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [showSearch, setShow]     = useState(false);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const linkedIds   = new Set(ticket.assets.map(a => a.id));
+
+    const search = (value: string) => {
+        setQuery(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (value.length < 2) { setResults([]); return; }
+        debounceRef.current = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const r = await window.axios.get('/assets/search', {
+                    params: { q: value, exclude: Array.from(linkedIds) },
+                });
+                setResults(r.data);
+            } finally { setSearching(false); }
+        }, 350);
+    };
+
+    const attach = (assetId: number) => {
+        router.post(`/tickets/${ticket.id}/assets/${assetId}`, {}, { preserveScroll: true, onSuccess: () => { setQuery(''); setResults([]); setShow(false); } });
+    };
+
+    const detach = (assetId: number) => {
+        router.delete(`/tickets/${ticket.id}/assets/${assetId}`, { preserveScroll: true });
+    };
+
+    return (
+        <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Linked Assets</label>
+                {canLink && (
+                    <button onClick={() => setShow(v => !v)}
+                        className="flex items-center gap-1 text-xs text-[--color-text-muted] hover:text-primary-600 font-medium transition-colors">
+                        <PlusIcon className="w-3.5 h-3.5" />Link
+                    </button>
+                )}
+            </div>
+
+            {/* Linked asset chips */}
+            {ticket.assets.length === 0 ? (
+                <p className="text-xs text-[--color-text-muted] italic">No assets linked.</p>
+            ) : (
+                <div className="space-y-1.5">
+                    {ticket.assets.map(a => (
+                        <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg border border-[--color-border] hover:border-primary-200 group">
+                            <ServerStackIcon className="w-3.5 h-3.5 text-[--color-text-muted] shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <Link href={`/admin/assets/${a.id}`} className="text-xs font-medium text-[--color-text] hover:text-primary-600 truncate block">{a.name}</Link>
+                                <p className="text-[10px] font-mono text-[--color-text-muted]">{a.asset_tag}</p>
+                            </div>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${ASSET_STATUS_COLORS[a.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                                {a.status.replace('_', ' ')}
+                            </span>
+                            {canLink && (
+                                <button onClick={() => detach(a.id)}
+                                    className="p-0.5 text-[--color-text-subtle] hover:text-danger-600 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                                    <XMarkIcon className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Search panel */}
+            {showSearch && canLink && (
+                <div className="pt-1 space-y-2">
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[--color-text-muted]" />
+                        <input
+                            autoFocus
+                            type="text"
+                            value={query}
+                            onChange={e => search(e.target.value)}
+                            placeholder="Search assets…"
+                            className="w-full pl-8 pr-3 py-1.5 text-xs border border-[--color-border] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+                    {(results.length > 0 || searching) && (
+                        <div className="border border-[--color-border] rounded-lg overflow-hidden shadow-sm">
+                            {searching
+                                ? <div className="px-3 py-2 text-xs text-[--color-text-muted]">Searching…</div>
+                                : results.map(r => (
+                                    <button key={r.id} onClick={() => attach(r.id)}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[--color-bg] border-b border-[--color-border] last:border-0 text-xs">
+                                        <span className="font-medium text-[--color-text] flex-1 truncate">{r.name}</span>
+                                        <span className="font-mono text-[--color-text-muted] shrink-0">{r.asset_tag}</span>
+                                    </button>
+                                ))
+                            }
+                        </div>
+                    )}
+                    {query.length >= 2 && !searching && results.length === 0 && (
+                        <p className="text-xs text-[--color-text-muted] italic">No assets found.</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ─── SLAPanel ───────────────────────────────────────────────────────────── */
 const SLA_STATUS_CLS: Record<string, string> = {
     ok:      'bg-success-100 text-success-700',
@@ -369,6 +483,103 @@ function SLAPanel({ ticket, canUpdate }: { ticket: TicketData; canUpdate: boolea
     );
 }
 
+/* ─── ChangeHistoryPanel ─────────────────────────────────────────────────── */
+const EVENT_BADGE_CLS: Record<string, string> = {
+    created: 'bg-green-100 text-green-700',
+    updated: 'bg-blue-100 text-blue-700',
+    deleted: 'bg-red-100 text-red-700',
+};
+
+function ChangeHistoryPanel({ activity }: { activity: ActivityEntry[] }) {
+    const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+    const [showAll, setShowAll]         = useState(false);
+
+    const toggle = (id: number) =>
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+
+    const displayed = showAll ? activity : activity.slice(0, 8);
+
+    return (
+        <div className="bg-white rounded-xl border border-[--color-border] p-4">
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Change History</p>
+                {activity.length > 0 && (
+                    <span className="text-xs text-[--color-text-muted]">{activity.length} events</span>
+                )}
+            </div>
+
+            {activity.length === 0 ? (
+                <p className="text-xs text-[--color-text-muted] italic">No changes recorded.</p>
+            ) : (
+                <>
+                    <ol className="space-y-2.5">
+                        {displayed.map(a => {
+                            const hasDiffs = a.diffs.length > 0;
+                            const isOpen   = expandedIds.has(a.id);
+                            return (
+                                <li key={a.id}>
+                                    <div
+                                        className={`flex items-start gap-2 text-xs ${hasDiffs ? 'cursor-pointer select-none' : ''}`}
+                                        onClick={() => hasDiffs && toggle(a.id)}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[--color-text-subtle] flex-shrink-0 mt-1.5" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                {a.event && (
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${EVENT_BADGE_CLS[a.event] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                        {a.event}
+                                                    </span>
+                                                )}
+                                                <span className="font-medium text-[--color-text]">{a.causer?.name ?? 'System'}</span>
+                                                <span className="text-[--color-text-muted]">{a.description}</span>
+                                                {hasDiffs && (
+                                                    isOpen
+                                                        ? <ChevronUpIcon className="w-3 h-3 text-[--color-text-muted] ml-auto flex-shrink-0" />
+                                                        : <ChevronDownIcon className="w-3 h-3 text-[--color-text-muted] ml-auto flex-shrink-0" />
+                                                )}
+                                            </div>
+                                            <p className="text-[--color-text-subtle] mt-0.5" title={a.created_at}>{a.created_at_diff}</p>
+                                            {isOpen && hasDiffs && (
+                                                <div className="mt-2 rounded-lg border border-[--color-border] overflow-hidden text-xs">
+                                                    <div className="grid grid-cols-3 gap-1 px-2 py-1 bg-[--color-bg] border-b border-[--color-border] text-[9px] font-semibold text-[--color-text-muted] uppercase tracking-wider">
+                                                        <span>Field</span><span>Before</span><span>After</span>
+                                                    </div>
+                                                    {a.diffs.map(d => (
+                                                        <div key={d.field} className="grid grid-cols-3 gap-1 px-2 py-1.5 border-b border-[--color-border] last:border-0">
+                                                            <span className="text-[--color-text-muted] font-medium">{d.field}</span>
+                                                            <span className="text-red-500 line-through truncate">{d.old}</span>
+                                                            <span className="text-green-700 font-medium truncate">{d.new}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                    {activity.length > 8 && (
+                        <button
+                            onClick={() => setShowAll(v => !v)}
+                            className="mt-3 flex items-center gap-1 text-xs text-[--color-text-muted] hover:text-primary-600 transition-colors"
+                        >
+                            {showAll
+                                ? <><ChevronUpIcon className="w-3 h-3" />Show less</>
+                                : <><ChevronDownIcon className="w-3 h-3" />Show all {activity.length}</>
+                            }
+                        </button>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const humanSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -378,12 +589,11 @@ const humanSize = (bytes: number) => {
 
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 export default function Show({ ticket, can, statuses, agents, teams, allTags }: Props) {
-    const [activeTab, setActiveTab]     = useState<'reply' | 'note'>(can.reply ? 'reply' : 'note');
-    const [body, setBody]               = useState('');
-    const [submitting, setSubmitting]   = useState(false);
-    const [mergeOpen, setMergeOpen]     = useState(false);
-    const [linkOpen, setLinkOpen]       = useState(false);
-    const [activityExpanded, setActExp] = useState(false);
+    const [activeTab, setActiveTab]   = useState<'reply' | 'note'>(can.reply ? 'reply' : 'note');
+    const [body, setBody]             = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [mergeOpen, setMergeOpen]   = useState(false);
+    const [linkOpen, setLinkOpen]     = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -415,8 +625,6 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
     const patchTeam     = (v: string) => router.patch(`/tickets/${ticket.id}/assign`,   { team_id: v || null },     { preserveScroll: true });
 
     const initials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
-    const displayedActivity = activityExpanded ? ticket.activity : ticket.activity.slice(0, 5);
 
     return (
         <AppLayout>
@@ -688,6 +896,9 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                             )}
                         </div>
 
+                        {/* Linked assets */}
+                        <AssetLinker ticket={ticket} canLink={can.link_asset} />
+
                         {/* Requester info */}
                         <div className="bg-white rounded-xl border border-[--color-border] p-4 space-y-3">
                             <label className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider">Requester</label>
@@ -737,47 +948,8 @@ export default function Show({ ticket, can, statuses, agents, teams, allTags }: 
                             )}
                         </div>
 
-                        {/* Activity timeline (P2-24: with before/after diff) */}
-                        {ticket.activity.length > 0 && (
-                            <div className="bg-white rounded-xl border border-[--color-border] p-4">
-                                <p className="text-xs font-semibold text-[--color-text-muted] uppercase tracking-wider mb-3">Activity</p>
-                                <ol className="space-y-3">
-                                    {displayedActivity.map(a => (
-                                        <li key={a.id} className="flex gap-2 text-xs">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[--color-text-subtle] flex-shrink-0 mt-1.5" />
-                                            <div className="flex-1 min-w-0">
-                                                <div>
-                                                    <span className="text-[--color-text] font-medium">{a.causer?.name ?? 'System'} </span>
-                                                    <span className="text-[--color-text-muted]">{a.description} · {a.created_at}</span>
-                                                </div>
-                                                {Object.keys(a.old).length > 0 && (
-                                                    <div className="mt-1.5 space-y-1 pl-2 border-l-2 border-[--color-border]">
-                                                        {Object.entries(a.old).map(([key, oldVal]) => {
-                                                            const newVal = a.changes[key];
-                                                            const displayKey = LABEL_KEY_MAP[key] ?? key.replace(/_/g, ' ');
-                                                            return (
-                                                                <div key={key} className="flex items-center gap-1 flex-wrap">
-                                                                    <span className="text-[--color-text-subtle] capitalize">{displayKey}:</span>
-                                                                    <span className="line-through text-danger-500">{String(oldVal ?? '—')}</span>
-                                                                    <span className="text-[--color-text-muted]">→</span>
-                                                                    <span className="text-success-600 font-medium">{String(newVal ?? '—')}</span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ol>
-                                {ticket.activity.length > 5 && (
-                                    <button onClick={() => setActExp(e => !e)}
-                                        className="mt-3 flex items-center gap-1 text-xs text-[--color-text-muted] hover:text-primary-600 transition-colors">
-                                        {activityExpanded ? <><ChevronUpIcon className="w-3 h-3" />Show less</> : <><ChevronDownIcon className="w-3 h-3" />Show all {ticket.activity.length}</>}
-                                    </button>
-                                )}
-                            </div>
-                        )}
+                        {/* Change History */}
+                        <ChangeHistoryPanel activity={ticket.activity} />
                     </div>
                 </div>
             </div>

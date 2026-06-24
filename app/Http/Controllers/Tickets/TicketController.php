@@ -87,8 +87,14 @@ class TicketController extends Controller
     public function store(CreateTicketRequest $request): RedirectResponse
     {
         /** @var User $actor */
-        $actor  = $request->user();
-        $ticket = $this->ticketService->createTicket($request->validated(), $actor);
+        $actor     = $request->user();
+        $validated = $request->validated();
+        $assetIds  = array_filter(array_map('intval', $validated['asset_ids'] ?? []));
+        $ticket    = $this->ticketService->createTicket($validated, $actor);
+
+        if ($assetIds) {
+            $ticket->assets()->sync($assetIds);
+        }
 
         return redirect()->route('tickets.show', $ticket)
             ->with('success', 'Ticket ' . $ticket->ticket_number . ' created.');
@@ -104,19 +110,13 @@ class TicketController extends Controller
             'childTickets:id,parent_ticket_id,ticket_number,subject',
             'replies.user', 'notes.user', 'watchers.user', 'customFieldValues.field',
             'attachments.user', 'slaRecord.policy',
+            'assets:id,name,asset_tag,type,status',
         ]);
 
         /** @var User $user */
         $user = Auth::user();
 
-        $activity = $ticket->activities()->latest()->take(30)->get()->map(fn ($a) => [
-            'id'          => $a->id,
-            'description' => $a->description,
-            'causer'      => $a->causer ? ['name' => $a->causer->name] : null,
-            'changes'     => $a->properties->get('attributes', []),
-            'old'         => $a->properties->get('old', []),
-            'created_at'  => $a->created_at->diffForHumans(),
-        ])->all();
+        $activity = $this->enrichActivity($ticket);
 
         $avatarUrl = fn (?User $u) => $u?->avatar ? Storage::disk('public')->url($u->avatar) : null;
 
@@ -179,6 +179,13 @@ class TicketController extends Controller
                     'field' => ['id' => $cfv->field->id, 'label' => $cfv->field->label, 'type' => $cfv->field->type],
                     'value' => $cfv->value,
                 ])->all(),
+                'assets'              => $ticket->assets->map(fn ($a) => [
+                    'id'        => $a->id,
+                    'name'      => $a->name,
+                    'asset_tag' => $a->asset_tag,
+                    'type'      => $a->type,
+                    'status'    => $a->status,
+                ])->all(),
             ],
             'can'      => [
                 'reply'           => $user->can('reply', $ticket),
@@ -192,6 +199,7 @@ class TicketController extends Controller
                 'delete'          => $user->can('delete', $ticket),
                 'link'            => $user->can('update', $ticket),
                 'attach'          => $user->can('update', $ticket),
+                'link_asset'      => $user->can('update', $ticket),
             ],
             'statuses' => TicketStatus::orderBy('sort_order')->get(['id', 'name', 'color']),
             'agents'   => User::role(['super_admin', 'admin', 'supervisor', 'agent'])->orderBy('name')->get(['id', 'name']),
@@ -232,5 +240,82 @@ class TicketController extends Controller
         $this->ticketService->deleteTicket($ticket);
 
         return redirect()->route('tickets.index')->with('success', 'Ticket deleted.');
+    }
+
+    private function enrichActivity(Ticket $ticket): array
+    {
+        $activities  = $ticket->activities()->with('causer')->latest()->take(50)->get();
+        $statusMap   = TicketStatus::pluck('name', 'id')->all();
+        $categoryMap = TicketCategory::pluck('name', 'id')->all();
+        $teamMap     = Team::pluck('name', 'id')->all();
+
+        $userIds = $activities->flatMap(function ($a) {
+            $merged = array_merge(
+                $a->properties->get('attributes', []),
+                $a->properties->get('old', [])
+            );
+            return isset($merged['assignee_id']) && $merged['assignee_id'] !== null
+                ? [(int) $merged['assignee_id']]
+                : [];
+        })->unique()->filter()->values()->all();
+
+        $userMap = empty($userIds) ? [] : User::whereIn('id', $userIds)->pluck('name', 'id')->all();
+
+        $fieldLabels = [
+            'status_id'   => 'Status',
+            'assignee_id' => 'Assignee',
+            'team_id'     => 'Team',
+            'category_id' => 'Category',
+            'priority'    => 'Priority',
+            'subject'     => 'Subject',
+            'is_vip'      => 'VIP',
+            'due_at'      => 'Due date',
+        ];
+
+        return $activities->map(function ($a) use ($fieldLabels, $statusMap, $categoryMap, $teamMap, $userMap) {
+            $oldAttrs = $a->properties->get('old', []);
+            $newAttrs = $a->properties->get('attributes', []);
+
+            $diffs = [];
+            foreach ($oldAttrs as $key => $oldVal) {
+                $diffs[] = [
+                    'field' => $fieldLabels[$key] ?? ucwords(str_replace('_', ' ', $key)),
+                    'old'   => $this->resolveActivityValue($key, $oldVal, $statusMap, $categoryMap, $teamMap, $userMap),
+                    'new'   => $this->resolveActivityValue($key, $newAttrs[$key] ?? null, $statusMap, $categoryMap, $teamMap, $userMap),
+                ];
+            }
+
+            return [
+                'id'              => $a->id,
+                'event'           => $a->event,
+                'description'     => $a->description,
+                'causer'          => $a->causer ? ['name' => $a->causer->name] : null,
+                'diffs'           => $diffs,
+                'created_at'      => $a->created_at->format('M d, Y g:i A'),
+                'created_at_diff' => $a->created_at->diffForHumans(),
+            ];
+        })->all();
+    }
+
+    private function resolveActivityValue(string $field, mixed $value, array $statusMap, array $categoryMap, array $teamMap, array $userMap): string
+    {
+        if ($value === null || $value === '') {
+            return match ($field) {
+                'assignee_id' => 'Unassigned',
+                'team_id'     => 'No team',
+                'category_id' => 'None',
+                default       => '—',
+            };
+        }
+
+        return match ($field) {
+            'status_id'   => $statusMap[(int) $value] ?? "Status #{$value}",
+            'assignee_id' => $userMap[(int) $value] ?? "User #{$value}",
+            'team_id'     => $teamMap[(int) $value] ?? "Team #{$value}",
+            'category_id' => $categoryMap[(int) $value] ?? "Category #{$value}",
+            'priority'    => ucfirst((string) $value),
+            'is_vip'      => (bool) $value ? 'Yes' : 'No',
+            default       => (string) $value,
+        };
     }
 }

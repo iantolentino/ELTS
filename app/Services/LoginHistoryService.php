@@ -36,12 +36,14 @@ class LoginHistoryService
         $status   = $filters['status']   ?? null;
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo   = $filters['date_to']   ?? null;
+        $userId   = isset($filters['user_id']) && $filters['user_id'] !== '' ? (int) $filters['user_id'] : null;
         $perPage  = in_array((int) ($filters['per_page'] ?? 25), [10, 25, 50, 100], true)
             ? (int) $filters['per_page']
             : 25;
 
         return LoginHistory::with('user:id,name,email')
             ->latest()
+            ->when($userId,  fn ($q) => $q->where('user_id', $userId))
             ->when($search, fn ($q) =>
                 $q->where(fn ($q2) =>
                     $q2->where('email', 'like', "%{$search}%")

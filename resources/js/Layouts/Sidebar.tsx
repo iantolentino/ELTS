@@ -27,6 +27,9 @@ import {
     ChatBubbleLeftEllipsisIcon,
     ChevronLeftIcon,
     ChevronRightIcon,
+    ServerStackIcon,
+    FingerPrintIcon,
+    ArchiveBoxXMarkIcon,
 } from '@heroicons/react/24/outline';
 import type { SharedProps } from '@/types';
 
@@ -59,9 +62,10 @@ const navigation: NavGroup[] = [
     {
         group: 'Resources',
         items: [
-            { label: 'Help Center',    href: '/kb',                   icon: BookOpenIcon,  roles: ['super_admin', 'admin', 'supervisor', 'agent', 'client'] },
-            { label: 'KB Articles',    href: '/admin/kb/articles',    icon: DocumentDuplicateIcon, roles: ['super_admin', 'admin', 'supervisor'] },
-            { label: 'KB Categories',  href: '/admin/kb/categories',  icon: FolderIcon,            roles: ['super_admin', 'admin'] },
+            { label: 'Help Center',    href: '/kb',                   icon: BookOpenIcon,           roles: ['super_admin', 'admin', 'supervisor', 'agent', 'client'] },
+            { label: 'KB Articles',    href: '/admin/kb/articles',    icon: DocumentDuplicateIcon,  roles: ['super_admin', 'admin', 'supervisor'] },
+            { label: 'KB Categories',  href: '/admin/kb/categories',  icon: FolderIcon,             roles: ['super_admin', 'admin'] },
+            { label: 'Assets',         href: '/admin/assets',         icon: ServerStackIcon,        roles: ['super_admin', 'admin', 'supervisor', 'agent'] },
             { label: 'Reports',            href: '/reports',                    icon: ChartBarIcon,             roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Custom Report',      href: '/reports/custom',             icon: PresentationChartLineIcon, roles: ['super_admin', 'admin', 'supervisor'] },
             { label: 'Scheduled Reports',  href: '/admin/scheduled-reports',    icon: CalendarDaysIcon,          roles: ['super_admin', 'admin', 'supervisor'] },
@@ -93,9 +97,11 @@ const navigation: NavGroup[] = [
     {
         group: 'Developer',
         items: [
-            { label: 'Active Sessions', href: '/admin/sessions',    icon: DevicePhoneMobileIcon,    roles: ['super_admin', 'admin'] },
-            { label: 'API & Webhooks',  href: '/api',               icon: CodeBracketIcon,           roles: ['super_admin', 'admin'] },
-            { label: 'Audit Logs',      href: '/audit',             icon: ClipboardDocumentListIcon, roles: ['super_admin', 'admin'] },
+            { label: 'Active Sessions', href: '/admin/sessions',       icon: DevicePhoneMobileIcon,    roles: ['super_admin', 'admin'] },
+            { label: 'Login History',   href: '/admin/login-history', icon: FingerPrintIcon,           roles: ['super_admin', 'admin'] },
+            { label: 'Audit Logs',      href: '/admin/audit-logs',    icon: ClipboardDocumentListIcon, roles: ['super_admin', 'admin'] },
+            { label: 'Data Retention',  href: '/admin/retention',     icon: ArchiveBoxXMarkIcon,       roles: ['super_admin', 'admin'] },
+            { label: 'API & Webhooks',  href: '/api',                 icon: CodeBracketIcon,           roles: ['super_admin', 'admin'] },
         ],
     },
 ];

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import NotificationPanel from '@/Components/NotificationPanel';
 import type { SharedProps } from '@/types';
 
 interface Props {
@@ -19,7 +20,9 @@ const STAFF_ROLES = ['super_admin', 'admin', 'supervisor', 'agent'];
 export default function Topbar({ title }: Props) {
     const { props } = usePage<SharedProps>();
     const user = props.auth.user;
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [menuOpen,  setMenuOpen]  = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
+    const unreadCount = props.notifications?.unread_count ?? 0;
 
     const isStaff = user?.roles?.some(r => STAFF_ROLES.includes(r)) ?? false;
     const currentStatus = user?.availability ?? 'offline';
@@ -58,10 +61,21 @@ export default function Topbar({ title }: Props) {
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 rounded-lg text-[--color-text-muted] hover:bg-[--color-bg] transition-colors" aria-label="Notifications">
-                <BellIcon className="w-5 h-5" />
-                {/* Badge wired in P12-02 */}
-            </button>
+            <div className="relative">
+                <button
+                    onClick={() => { setNotifOpen(v => !v); setMenuOpen(false); }}
+                    className="relative p-2 rounded-lg text-[--color-text-muted] hover:bg-[--color-bg] transition-colors"
+                    aria-label="Notifications"
+                >
+                    <BellIcon className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
+                </button>
+                <NotificationPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+            </div>
 
             {/* User dropdown */}
             {user && (

@@ -10,6 +10,10 @@ use App\Events\TicketReplied;
 use App\Events\TicketStatusChanged;
 use App\Jobs\SendCSATSurvey;
 use App\Jobs\SendTicketEmail;
+use App\Models\User;
+use App\Notifications\MentionedInTicketNotification;
+use App\Notifications\ReplyReceivedNotification;
+use App\Notifications\TicketAssignedNotification;
 
 class SendTicketNotification
 {
@@ -27,11 +31,11 @@ class SendTicketNotification
 
     public function handleTicketReplied(TicketReplied $event): void
     {
-        $ticket = $event->ticket->load(['requester', 'status']);
+        $ticket = $event->ticket->load(['requester', 'status', 'watchers']);
         $reply  = $event->reply;
         $actor  = $event->actor;
 
-        // Notify requester when agent replies (not when requester replies to themselves)
+        // Notify requester when agent replies
         if ($actor->id !== $ticket->requester_id) {
             $extra = [
                 'reply_body' => $reply->body,
@@ -51,6 +55,27 @@ class SendTicketNotification
                 $extra,
                 $cc,
             );
+
+            $ticket->requester->notify(new ReplyReceivedNotification($ticket, $reply, $actor));
+        }
+
+        // Notify watchers (excluding the reply actor and the requester)
+        $watcherUserIds = $ticket->watchers->pluck('user_id')->filter()->toArray();
+        if (count($watcherUserIds) > 0) {
+            User::whereIn('id', $watcherUserIds)
+                ->where('id', '!=', $actor->id)
+                ->where('id', '!=', $ticket->requester_id)
+                ->get()
+                ->each(fn (User $u) => $u->notify(new ReplyReceivedNotification($ticket, $reply, $actor)));
+        }
+
+        // Notify @mentioned users
+        $mentionedIds = $this->extractMentionIds($reply->body);
+        if (count($mentionedIds) > 0) {
+            User::whereIn('id', $mentionedIds)
+                ->where('id', '!=', $actor->id)
+                ->get()
+                ->each(fn (User $u) => $u->notify(new MentionedInTicketNotification($ticket, $actor)));
         }
     }
 
@@ -90,5 +115,13 @@ class SendTicketNotification
             $assignee->name,
             ['assignee_name' => $assignee->name],
         );
+
+        $assignee->notify(new TicketAssignedNotification($ticket));
+    }
+
+    private function extractMentionIds(string $html): array
+    {
+        preg_match_all('/data-id=["\'](\d+)["\']/', $html, $matches);
+        return array_map('intval', array_unique($matches[1]));
     }
 }

@@ -149,6 +149,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Data Retention Defaults
+    |--------------------------------------------------------------------------
+    | These are the fallback values used when no admin-configured setting
+    | exists in storage/app/retention_settings.json (set via the UI).
+    | Overriding via .env is also supported for server-managed deployments.
+    */
+    'retention' => [
+        // Days to keep activity_log records (admin audit trail)
+        'activity_log_days'  => (int) env('RETENTION_ACTIVITY_LOG_DAYS', 90),
+
+        // Days to keep login_histories records
+        'login_history_days' => (int) env('RETENTION_LOGIN_HISTORY_DAYS', 180),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination Defaults
     |--------------------------------------------------------------------------
     */

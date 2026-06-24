@@ -3,13 +3,13 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 9 IN PROGRESS
+## STATE: EXECUTION_MODE — PHASE 10 IN PROGRESS
 
 **Last updated:** 2026-06-24
-**Last completed:** P9-06 — CSAT per-agent and per-team breakdown table
-**Current phase:** Phase 9 — COMPLETE
-**Next task:** P10-01 — Migrations: assets, asset_assignments tables
-**Pending migrations:** `php artisan migrate` (scheduled_reports + knowledge_* + csat_surveys + nps_surveys) — requires MySQL running
+**Last completed:** P12-03 — Wire notifications: ticket assigned, reply received, @mention, SLA warning, SLA breach
+**Current phase:** Phase 12 — Notifications
+**Next task:** P12-04 — Build notification preferences page (user can toggle each event on/off per channel)
+**Pending migrations:** None — all migrations current as of 2026-06-24 (notifications, knowledge_categories, knowledge_articles, csat_surveys, nps_surveys, assets, asset_assignments, ticket_assets all applied)
 
 ---
 

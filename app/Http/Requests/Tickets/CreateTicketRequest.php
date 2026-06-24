@@ -27,6 +27,8 @@ class CreateTicketRequest extends FormRequest
             'team_id'     => ['nullable', 'integer', 'exists:teams,id'],
             'is_vip'      => ['nullable', 'boolean'],
             'due_at'      => ['nullable', 'date'],
+            'asset_ids'   => ['nullable', 'array'],
+            'asset_ids.*' => ['integer', 'exists:assets,id'],
         ];
     }
 }

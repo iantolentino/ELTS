@@ -18,7 +18,9 @@ class SlaRecord extends Model
         'first_response_due',
         'resolution_due',
         'first_response_breached',
+        'first_response_warning_sent',
         'resolution_breached',
+        'resolution_warning_sent',
         'first_response_met_at',
         'resolution_met_at',
         'paused_at',
@@ -28,14 +30,16 @@ class SlaRecord extends Model
     protected function casts(): array
     {
         return [
-            'first_response_due'      => 'datetime',
-            'resolution_due'          => 'datetime',
-            'first_response_breached' => 'boolean',
-            'resolution_breached'     => 'boolean',
-            'first_response_met_at'   => 'datetime',
-            'resolution_met_at'       => 'datetime',
-            'paused_at'               => 'datetime',
-            'paused_minutes'          => 'integer',
+            'first_response_due'          => 'datetime',
+            'resolution_due'              => 'datetime',
+            'first_response_breached'     => 'boolean',
+            'first_response_warning_sent' => 'boolean',
+            'resolution_breached'         => 'boolean',
+            'resolution_warning_sent'     => 'boolean',
+            'first_response_met_at'       => 'datetime',
+            'resolution_met_at'           => 'datetime',
+            'paused_at'                   => 'datetime',
+            'paused_minutes'              => 'integer',
         ];
     }
 
