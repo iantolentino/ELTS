@@ -37,6 +37,7 @@ class ReportsController extends Controller
         $slaCompliance    = $this->reports->slaCompliance($from, $to);
         $agentPerformance = $this->reports->agentPerformance($from, $to);
         $teamComparison    = $this->reports->teamComparison($from, $to);
+        $csatByTeam        = $this->reports->csatByTeam($from, $to);
         $byPriority        = $this->reports->ticketsByPriority($from, $to);
         $byStatus          = $this->reports->ticketsByStatus($from, $to);
         $byCategory        = $this->reports->ticketsByCategory($from, $to);
@@ -46,6 +47,7 @@ class ReportsController extends Controller
             'sla_compliance'    => $slaCompliance,
             'agent_performance' => $agentPerformance,
             'team_comparison'   => $teamComparison,
+            'csat_by_team'      => $csatByTeam,
             'by_priority'       => $byPriority,
             'by_status'         => $byStatus,
             'by_category'       => $byCategory,

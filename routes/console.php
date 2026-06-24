@@ -40,4 +40,7 @@ app()->booted(function () {
 
     // P7-13 — Dispatch GenerateScheduledReport jobs for any reports due at this minute
     $schedule->command('reports:dispatch-scheduled')->everyMinute();
+
+    // P9-04 — Dispatch NPS survey jobs for eligible clients (frequency-gated, 100 users/run)
+    $schedule->command('surveys:send-nps')->daily();
 });

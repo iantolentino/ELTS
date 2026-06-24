@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CsatController;
+use App\Http\Controllers\NpsController;
 use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\Tickets\TicketController;
@@ -58,6 +60,12 @@ use Inertia\Inertia;
 | Public routes (no authentication required)
 |--------------------------------------------------------------------------
 */
+Route::get('/csat/{token}',  [CsatController::class, 'show'])->name('csat.show');
+Route::post('/csat/{token}', [CsatController::class, 'store'])->name('csat.store');
+
+Route::get('/nps/{token}',   [NpsController::class, 'show'])->name('nps.show');
+Route::post('/nps/{token}',  [NpsController::class, 'store'])->name('nps.store');
+
 Route::get('/kb',                                  [KnowledgeBaseController::class, 'index'])->name('kb.index');
 Route::get('/kb/search',                           [KnowledgeBaseController::class, 'searchSuggest'])->name('kb.search');
 Route::get('/kb/articles/{slug}',                  [KnowledgeBaseController::class, 'show'])->name('kb.articles.show');

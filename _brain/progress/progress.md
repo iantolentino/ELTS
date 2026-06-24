@@ -703,11 +703,32 @@
   - app/Models/NpsSurvey.php — HasFactory, casts, user relation, isExpired(), hasResponded(), category() → promoter/passive/detractor
   - database/factories/CsatSurveyFactory.php — responded(score) state
   - database/factories/NpsSurveyFactory.php — responded(score) state
-- [ ] P9-02 — Build SendCSATSurvey job (dispatched with 1hr delay on ticket resolved)
-- [ ] P9-03 — Build CSAT response page (public, no login — token-based URL)
-- [ ] P9-04 — Build NPS survey email + response page (periodic, token-based)
-- [ ] P9-05 — Build CSAT/NPS metrics on dashboard (avg score, trend chart)
-- [ ] P9-06 — Build CSAT per-agent and per-team breakdown table
+- [x] P9-02 — Build SendCSATSurvey job (dispatched with 1hr delay on ticket resolved)
+  - app/Jobs/SendCSATSurvey.php — ShouldQueue, tries=3, timeout=60; idempotent (skips if CsatSurvey already exists for ticket); creates CsatSurvey record with Str::random(64) token + sent_at; sends CsatSurveyMail
+  - app/Mail/CsatSurveyMail.php — subject "How did we do? — Ticket #N"; uses emails.csat-survey view
+  - resources/views/emails/csat-survey.blade.php — 5 emoji rating buttons (😞–😄) as links to /csat/{token}?score=N; fallback text link to /csat/{token}; expiry notice from config
+  - app/Listeners/SendTicketNotification.php — on isNowResolved: dispatches SendCSATSurvey with ->delay(addHours(csat_delay_hours))
+- [x] P9-03 — Build CSAT response page (public, no login — token-based URL)
+  - app/Http/Controllers/CsatController.php — show() loads survey with ticket, validates ?score= (1-5), passes survey data + pre_score to Csat/Show; store() guards hasResponded()/isExpired(), validates score+comment, updates survey with responded_at=now(), redirects with success flash
+  - resources/js/Pages/Csat/Show.tsx — PublicLayout; ticket context card at top; 4 states: success/already-responded (CheckCircleIcon + score emoji), expired (ClockIcon), rating form; emoji rating picker (StarRating component with hover+active states, scale animation); optional comment textarea; submit button disabled until score selected
+  - routes/web.php — GET/POST /csat/{token} → csat.show / csat.store (already registered in P9-03 controller step)
+- [x] P9-04 — Build NPS survey email + response page (periodic, token-based)
+  - app/Console/Commands/SendNpsSurveys.php — artisan surveys:send-nps; queries client users whose last NPS sent_at < nps_frequency_days ago (or never); dispatches SendNpsSurvey job per eligible user; --limit=100 option
+  - app/Jobs/SendNpsSurvey.php — ShouldQueue, tries=3, timeout=60; idempotent (skips if recent NPS in frequency window already exists); creates NpsSurvey with Str::random(64) token + sent_at; sends NpsSurveyMail
+  - app/Mail/NpsSurveyMail.php — subject "How likely are you to recommend us?"; uses emails.nps-survey view
+  - resources/views/emails/nps-survey.blade.php — 0–10 color-coded score buttons (red ≤6, yellow 7–8, green 9–10) as links to /nps/{token}?score=N; fallback survey link; expiry notice
+  - app/Http/Controllers/NpsController.php — show(): loads survey, validates ?score= (0-10), passes to Nps/Show; store(): guards hasResponded()/isExpired(), validates score (0-10) + comment (max 2000), updates survey, redirects with success flash
+  - resources/js/Pages/Nps/Show.tsx — PublicLayout; NpsScale (0–10 buttons with red/yellow/green color zones + hover effects); live category label (promoter/passive/detractor) shown as score is selected; responded (score shown + category), expired, and form states; optional comment textarea (max 2000)
+  - routes/web.php — GET/POST /nps/{token} → nps.show / nps.store
+  - routes/console.php — surveys:send-nps scheduled daily
+- [x] P9-05 — Build CSAT/NPS metrics on dashboard (avg score, trend chart)
+  - app/Services/ReportService.php — added csatMetrics() (avg_score 1-5, total_responses, total_sent, response_rate%); csatTrend() (avg score per period, zero-filled, nulls for no-data periods); npsMetrics() (nps_score = promoters% − detractors%, breakdown pct, total_responses)
+  - app/Http/Controllers/DashboardController.php — calls csatMetrics, csatTrend, npsMetrics; passes csat/csat_trend/nps to page
+  - resources/js/Pages/Dashboard/Index.tsx — Satisfaction section below ticket volume chart: CSAT score card (avg/5 with emoji, responses/sent/rate stats), NPS score card (+/- 100 with green/amber/red promoter-passive-detractor bars), CSAT trend LineChart (domain 1-5, connectNulls=false so gaps show); npsColor/csatColor helpers color-code cards by threshold
+- [x] P9-06 — Build CSAT per-agent and per-team breakdown table
+  - app/Services/ReportService.php — agentPerformance() now joins csat_surveys via ticket.assignee_id and includes csat_avg + csat_responses per agent; new csatByTeam() joins csat_surveys → tickets → teams, returns avg_score + responses per team
+  - app/Http/Controllers/ReportsController.php — index() calls csatByTeam, passes csat_by_team to Inertia
+  - resources/js/Pages/Reports/Index.tsx — CsatTeamRow interface + csat_by_team prop added; agent performance CSAT column now color-coded (green ≥4/amber ≥3/red <3) with response count in parentheses; new "CSAT by Team" section between Team Comparison and Ticket Breakdown — table with avg score, emoji, response count, and color-coded progress bar (% of max 5)
 
 ---
 
@@ -818,6 +839,6 @@
 ---
 
 ## CURRENT STATUS
-- Phase: 6 — COMPLETE (synced from other machine)
-- Last completed task: P6-04 — Canned response variable interpolation
-- Next task: P7-01 — Build ReportService with all metric calculation methods
+- Phase: 9 — COMPLETE
+- Last completed task: P9-06 — CSAT per-agent and per-team breakdown table
+- Next task: P10-01 — Migrations: assets, asset_assignments tables

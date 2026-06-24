@@ -3,14 +3,13 @@
 
 ---
 
-## STATE: EXECUTION_MODE — PHASE 8 IN PROGRESS
+## STATE: EXECUTION_MODE — PHASE 9 IN PROGRESS
 
 **Last updated:** 2026-06-24
-**Last completed:** P9-01 — Migrations: csat_surveys, nps_surveys tables + models + factories
-**Current phase:** Phase 9 — Customer Satisfaction / CSAT + NPS (IN PROGRESS)
-**Next task:** P9-02 — Build SendCSATSurvey job (dispatched with 1hr delay on ticket resolved)
+**Last completed:** P9-06 — CSAT per-agent and per-team breakdown table
+**Current phase:** Phase 9 — COMPLETE
+**Next task:** P10-01 — Migrations: assets, asset_assignments tables
 **Pending migrations:** `php artisan migrate` (scheduled_reports + knowledge_* + csat_surveys + nps_surveys) — requires MySQL running
-**Pending migrations:** `php artisan migrate` (scheduled_reports + knowledge_categories + knowledge_articles) — requires MySQL running
 
 ---
 

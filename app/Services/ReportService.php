@@ -274,9 +274,21 @@ class ReportService
             ->get()
             ->keyBy('assignee_id');
 
-        return $handled->map(function ($r) use ($slaRows) {
+        // CSAT avg per agent (via ticket → csat_survey, responded in period)
+        $csatRows = DB::table('csat_surveys')
+            ->join('tickets', 'csat_surveys.ticket_id', '=', 'tickets.id')
+            ->whereNotNull('csat_surveys.score')
+            ->whereBetween('csat_surveys.responded_at', [$from, $to])
+            ->whereNotNull('tickets.assignee_id')
+            ->selectRaw('tickets.assignee_id, AVG(csat_surveys.score) as avg_score, COUNT(*) as cnt')
+            ->groupBy('tickets.assignee_id')
+            ->get()
+            ->keyBy('assignee_id');
+
+        return $handled->map(function ($r) use ($slaRows, $csatRows) {
             $sla   = $slaRows->get($r->agent_id);
             $total = (int) ($sla->total ?? 0);
+            $csat  = $csatRows->get($r->agent_id);
 
             return [
                 'agent_id'                    => (int) $r->agent_id,
@@ -287,8 +299,35 @@ class ReportService
                 'sla_compliance_pct'          => $total > 0
                     ? round(((int) $sla->compliant / $total) * 100, 1)
                     : null,
+                'csat_avg'           => $csat ? round((float) $csat->avg_score, 2) : null,
+                'csat_responses'     => $csat ? (int) $csat->cnt : 0,
             ];
         })->all();
+    }
+
+    /**
+     * CSAT breakdown per team.
+     *
+     * @return array<int, array{team: string, avg_score: float|null, responses: int}>
+     */
+    public function csatByTeam(Carbon $from, Carbon $to): array
+    {
+        return DB::table('csat_surveys')
+            ->join('tickets', 'csat_surveys.ticket_id', '=', 'tickets.id')
+            ->join('teams', 'tickets.team_id', '=', 'teams.id')
+            ->whereNotNull('csat_surveys.score')
+            ->whereBetween('csat_surveys.responded_at', [$from, $to])
+            ->whereNotNull('tickets.team_id')
+            ->selectRaw('teams.name as team, AVG(csat_surveys.score) as avg_score, COUNT(*) as cnt')
+            ->groupBy('teams.id', 'teams.name')
+            ->orderByDesc('avg_score')
+            ->get()
+            ->map(fn ($r) => [
+                'team'      => $r->team,
+                'avg_score' => round((float) $r->avg_score, 2),
+                'responses' => (int) $r->cnt,
+            ])
+            ->all();
     }
 
     /* ── Team Comparison ─────────────────────────────────────────────────── */
@@ -499,5 +538,125 @@ class ReportService
         $m = round($minutes % 60);
 
         return $m > 0 ? "{$h}h {$m}m" : "{$h}h";
+    }
+
+    /* ── Satisfaction Metrics ────────────────────────────────────────────── */
+
+    /**
+     * CSAT summary for the period.
+     *
+     * @return array{avg_score: float|null, total_responses: int, total_sent: int, response_rate: float|null}
+     */
+    public function csatMetrics(Carbon $from, Carbon $to): array
+    {
+        $sent = DB::table('csat_surveys')
+            ->whereBetween('sent_at', [$from, $to])
+            ->count();
+
+        $responded = DB::table('csat_surveys')
+            ->whereNotNull('responded_at')
+            ->whereBetween('responded_at', [$from, $to])
+            ->count();
+
+        $avg = DB::table('csat_surveys')
+            ->whereNotNull('score')
+            ->whereBetween('responded_at', [$from, $to])
+            ->avg('score');
+
+        return [
+            'avg_score'        => $avg !== null ? round((float) $avg, 2) : null,
+            'total_responses'  => $responded,
+            'total_sent'       => $sent,
+            'response_rate'    => $sent > 0 ? round($responded / $sent * 100, 1) : null,
+        ];
+    }
+
+    /**
+     * CSAT average score over time, grouped by 'day', 'week', or 'month'.
+     *
+     * @return array<int, array{label: string, avg_score: float|null, responses: int}>
+     */
+    public function csatTrend(Carbon $from, Carbon $to, string $groupBy = 'day'): array
+    {
+        $format = match ($groupBy) {
+            'week'  => '%Y-%u',
+            'month' => '%Y-%m',
+            default => '%Y-%m-%d',
+        };
+
+        $rows = DB::table('csat_surveys')
+            ->whereNotNull('score')
+            ->whereBetween('responded_at', [$from, $to])
+            ->selectRaw("DATE_FORMAT(responded_at, '{$format}') as period, AVG(score) as avg_s, COUNT(*) as cnt")
+            ->groupBy('period')
+            ->orderBy('period')
+            ->get()
+            ->keyBy('period');
+
+        $filled = [];
+        $period = CarbonPeriod::create(
+            $from->copy()->startOf($groupBy === 'week' ? 'week' : ($groupBy === 'month' ? 'month' : 'day')),
+            "1 {$groupBy}",
+            $to,
+        );
+
+        foreach ($period as $date) {
+            $key  = $date->format(match ($groupBy) {
+                'week'  => 'Y-W',
+                'month' => 'Y-m',
+                default => 'Y-m-d',
+            });
+            $row  = $rows->get($key);
+            $filled[] = [
+                'label'     => $date->format(match ($groupBy) {
+                    'week'  => 'W/Y',
+                    'month' => 'M Y',
+                    default => 'M j',
+                }),
+                'avg_score' => $row ? round((float) $row->avg_s, 2) : null,
+                'responses' => $row ? (int) $row->cnt : 0,
+            ];
+        }
+
+        return $filled;
+    }
+
+    /**
+     * NPS summary for the period.
+     * NPS = % promoters (9–10) − % detractors (0–6). Range: −100 to 100.
+     *
+     * @return array{nps_score: int|null, promoters_pct: float, passives_pct: float, detractors_pct: float, total_responses: int}
+     */
+    public function npsMetrics(Carbon $from, Carbon $to): array
+    {
+        $rows = DB::table('nps_surveys')
+            ->whereNotNull('score')
+            ->whereBetween('responded_at', [$from, $to])
+            ->selectRaw('score')
+            ->get();
+
+        $total = $rows->count();
+
+        if ($total === 0) {
+            return [
+                'nps_score'       => null,
+                'promoters_pct'   => 0.0,
+                'passives_pct'    => 0.0,
+                'detractors_pct'  => 0.0,
+                'total_responses' => 0,
+            ];
+        }
+
+        $promoters  = $rows->filter(fn ($r) => $r->score >= 9)->count();
+        $passives   = $rows->filter(fn ($r) => $r->score >= 7 && $r->score <= 8)->count();
+        $detractors = $rows->filter(fn ($r) => $r->score <= 6)->count();
+
+        return [
+            'nps_score'       => (int) round(($promoters - $detractors) / $total * 100),
+            'promoters_pct'   => round($promoters  / $total * 100, 1),
+            'passives_pct'    => round($passives   / $total * 100, 1),
+            'detractors_pct'  => round($detractors / $total * 100, 1),
+            'total_responses' => $total,
+        ];
     }
 }

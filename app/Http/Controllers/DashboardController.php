@@ -24,16 +24,24 @@ class DashboardController extends Controller
             ? Carbon::parse($request->input('to'))->endOfDay()
             : now()->endOfDay();
 
+        $granularity = $request->input('granularity', 'day');
+
         $kpis  = $this->reports->kpiSummary($from, $to);
-        $trend = $this->reports->ticketVolumeTrend($from, $to, $request->input('granularity', 'day'));
+        $trend = $this->reports->ticketVolumeTrend($from, $to, $granularity);
+        $csat  = $this->reports->csatMetrics($from, $to);
+        $csatTrend = $this->reports->csatTrend($from, $to, $granularity);
+        $nps   = $this->reports->npsMetrics($from, $to);
 
         return Inertia::render('Dashboard/Index', [
             'kpis'        => $kpis,
             'trend'       => $trend,
+            'csat'        => $csat,
+            'csat_trend'  => $csatTrend,
+            'nps'         => $nps,
             'filters'     => [
                 'from'        => $from->toDateString(),
                 'to'          => $to->toDateString(),
-                'granularity' => $request->input('granularity', 'day'),
+                'granularity' => $granularity,
             ],
         ]);
     }

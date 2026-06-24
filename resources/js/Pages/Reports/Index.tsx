@@ -33,6 +33,13 @@ interface AgentRow {
     avg_first_response_minutes:  number | null;
     sla_compliance_pct:          number | null;
     csat_avg:                    number | null;
+    csat_responses:              number;
+}
+
+interface CsatTeamRow {
+    team:      string;
+    avg_score: number;
+    responses: number;
 }
 
 interface SlaCompliance {
@@ -54,6 +61,7 @@ interface Props {
     sla_compliance:    SlaCompliance;
     agent_performance: AgentRow[];
     team_comparison:   TeamRow[];
+    csat_by_team:      CsatTeamRow[];
     by_priority:       PriorityRow[];
     by_status:         StatusRow[];
     by_category:       CategoryRow[];
@@ -227,7 +235,22 @@ const CATEGORY_PALETTE = [
     '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#84cc16',
 ];
 
-export default function ReportsIndex({ first_response, sla_compliance, agent_performance, team_comparison, by_priority, by_status, by_category, filters }: Props) {
+function csatScoreColor(score: number | null): string {
+    if (score === null) return 'text-[--color-text-muted]';
+    if (score >= 4.0) return 'text-green-500';
+    if (score >= 3.0) return 'text-amber-500';
+    return 'text-red-500';
+}
+
+function csatEmoji(score: number): string {
+    if (score >= 4.5) return '😄';
+    if (score >= 3.5) return '🙂';
+    if (score >= 2.5) return '😐';
+    if (score >= 1.5) return '😕';
+    return '😞';
+}
+
+export default function ReportsIndex({ first_response, sla_compliance, agent_performance, team_comparison, csat_by_team, by_priority, by_status, by_category, filters }: Props) {
     const [from, setFrom]         = useState(filters.from);
     const [to, setTo]             = useState(filters.to);
     const [groupBy, setGroupBy]   = useState(filters.group_by);
@@ -465,8 +488,10 @@ export default function ReportsIndex({ first_response, sla_compliance, agent_per
                                                 <td className={`py-2.5 px-3 text-right tabular-nums font-semibold ${slaColor}`}>
                                                     {row.sla_compliance_pct !== null ? `${row.sla_compliance_pct}%` : '—'}
                                                 </td>
-                                                <td className="py-2.5 px-3 text-right text-[--color-text-muted]">
-                                                    {row.csat_avg !== null ? row.csat_avg.toFixed(1) : '—'}
+                                                <td className={`py-2.5 px-3 text-right tabular-nums font-semibold ${csatScoreColor(row.csat_avg)}`}>
+                                                    {row.csat_avg !== null
+                                                        ? <>{row.csat_avg.toFixed(1)} <span className="text-[10px] font-normal text-[--color-text-muted]">({row.csat_responses})</span></>
+                                                        : '—'}
                                                 </td>
                                             </tr>
                                         );
@@ -568,6 +593,60 @@ export default function ReportsIndex({ first_response, sla_compliance, agent_per
                                 </span>
                             </div>
                         </>
+                    )}
+                </section>
+
+                {/* ── CSAT Breakdown ────────────────────────────────────── */}
+                <section className="bg-[--color-surface] border border-[--color-border] rounded-xl p-5">
+                    <div className="mb-4">
+                        <h2 className="text-sm font-semibold text-[--color-text]">CSAT by Team</h2>
+                        <p className="text-xs text-[--color-text-muted] mt-0.5">
+                            Average customer satisfaction score per team for the selected period
+                        </p>
+                    </div>
+
+                    {csat_by_team.length === 0 ? (
+                        <div className="flex items-center justify-center h-24 text-[--color-text-muted] text-sm">
+                            No CSAT responses for selected period
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[--color-border]">
+                                        <th className="text-left py-2 px-3 text-xs font-medium text-[--color-text-muted]">Team</th>
+                                        <th className="text-right py-2 px-3 text-xs font-medium text-[--color-text-muted]">Avg Score</th>
+                                        <th className="text-right py-2 px-3 text-xs font-medium text-[--color-text-muted]">Responses</th>
+                                        <th className="py-2 px-3 text-xs font-medium text-[--color-text-muted]">Score bar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {csat_by_team.map(row => (
+                                        <tr key={row.team} className="border-b border-[--color-border] last:border-0 hover:bg-[--color-bg]">
+                                            <td className="py-2.5 px-3 font-medium text-[--color-text]">{row.team}</td>
+                                            <td className={`py-2.5 px-3 text-right tabular-nums font-semibold ${csatScoreColor(row.avg_score)}`}>
+                                                {row.avg_score.toFixed(2)} {csatEmoji(row.avg_score)}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums text-[--color-text-muted]">
+                                                {row.responses}
+                                            </td>
+                                            <td className="py-2.5 px-3 w-40">
+                                                <div className="h-2 rounded-full bg-[--color-border]">
+                                                    <div
+                                                        className="h-2 rounded-full transition-all"
+                                                        style={{
+                                                            width: `${(row.avg_score / 5) * 100}%`,
+                                                            background: row.avg_score >= 4.0 ? '#22c55e' : row.avg_score >= 3.0 ? '#f59e0b' : '#ef4444',
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] text-[--color-text-muted]">{((row.avg_score / 5) * 100).toFixed(0)}% of max</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </section>
 

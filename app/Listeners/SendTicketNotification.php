@@ -8,6 +8,7 @@ use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
 use App\Events\TicketReplied;
 use App\Events\TicketStatusChanged;
+use App\Jobs\SendCSATSurvey;
 use App\Jobs\SendTicketEmail;
 
 class SendTicketNotification
@@ -64,6 +65,9 @@ class SendTicketNotification
                 $ticket->requester->email,
                 $ticket->requester->name,
             );
+
+            $delayHours = config('ticketing.satisfaction.csat_delay_hours', 1);
+            SendCSATSurvey::dispatch($ticket)->delay(now()->addHours($delayHours));
         } elseif ($event->isNowClosed) {
             SendTicketEmail::dispatch(
                 $ticket,
