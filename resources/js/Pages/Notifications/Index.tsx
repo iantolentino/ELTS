@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import {
     BellIcon, CheckIcon, TrashIcon, TicketIcon,
     ChatBubbleLeftIcon, AtSymbolIcon, ClockIcon, ExclamationTriangleIcon,
+    Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import type { AppNotification, PaginatedData } from '@/types';
 
@@ -109,14 +110,23 @@ export default function NotificationsIndex({ notifications, filter }: Props) {
                         <h1 className="text-xl font-semibold text-[--color-text]">Notifications</h1>
                         <p className="mt-1 text-sm text-[--color-text-muted]">Your activity updates and alerts.</p>
                     </div>
-                    {notifications.total > 0 && (
-                        <button
-                            onClick={markAllRead}
-                            className="px-4 h-9 text-sm font-medium bg-[--color-surface] border border-[--color-border] rounded-lg text-[--color-text] hover:bg-[--color-bg] transition-colors"
+                    <div className="flex items-center gap-2">
+                        {notifications.total > 0 && (
+                            <button
+                                onClick={markAllRead}
+                                className="px-4 h-9 text-sm font-medium bg-[--color-surface] border border-[--color-border] rounded-lg text-[--color-text] hover:bg-[--color-bg] transition-colors"
+                            >
+                                Mark all read
+                            </button>
+                        )}
+                        <Link
+                            href="/notifications/preferences"
+                            className="p-2 rounded-lg text-[--color-text-muted] hover:bg-[--color-surface] border border-transparent hover:border-[--color-border] transition-colors"
+                            title="Notification preferences"
                         >
-                            Mark all read
-                        </button>
-                    )}
+                            <Cog6ToothIcon className="w-5 h-5" />
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="bg-[--color-surface] border border-[--color-border] rounded-xl overflow-hidden">

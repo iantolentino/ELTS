@@ -18,7 +18,19 @@ class ReplyReceivedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = [];
+        if ($notifiable->prefersNotification('reply_received', 'in_app')) {
+            $channels[] = 'database';
+        }
+        if ($notifiable->pushSubscriptions()->exists()) {
+            $channels[] = 'webpush';
+        }
+        return $channels;
+    }
+
+    public function toWebPush(object $notifiable): array
+    {
+        return $this->toArray($notifiable);
     }
 
     public function toArray(object $notifiable): array

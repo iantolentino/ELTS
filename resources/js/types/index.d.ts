@@ -14,6 +14,13 @@ export interface Flash {
     error: string | null;
 }
 
+export interface NotificationPreference {
+    event:  string;
+    label:  string;
+    in_app: boolean;
+    email:  boolean;
+}
+
 export interface AppNotificationData {
     title?:  string;
     body?:   string;

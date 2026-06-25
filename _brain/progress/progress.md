@@ -862,8 +862,35 @@
   - AppServiceProvider: SLAWarning event → SendSLAWarningNotification registered
   - NotificationPanel.tsx + Pages/Notifications/Index.tsx: notifMeta() helper maps event → icon + color (TicketIcon, ChatBubbleLeftIcon, AtSymbolIcon, ClockIcon, ExclamationTriangleIcon)
   - Build: 0 errors
-- [ ] P12-04 — Build notification preferences page (user can toggle each event on/off per channel)
-- [ ] P12-05 — Implement browser push notifications (Web Push API + service worker)
+- [x] P12-04 — Build notification preferences page (user can toggle each event on/off per channel)
+  - Migration: notification_preferences (user_id FK, event string, in_app bool default true, email bool default true, unique user_id+event)
+  - Model: NotificationPreference (fillable: user_id, event, in_app, email; casts in_app+email → boolean)
+  - User model: notificationPreferences() HasMany + prefersNotification(event, channel='in_app'): bool helper (defaults true if no row)
+  - All 5 notification via() methods updated to check preferences: ticket_assigned, reply_received, mention, sla_warning, sla_breach
+  - UpdateNotificationPreferencesRequest: validates preferences.*.in_app + preferences.*.email as boolean
+  - NotificationPreferenceController: index() builds full 5-event map with saved/default values → Inertia render; update() upserts per event with key validation
+  - Routes: GET /notifications/preferences, PUT /notifications/preferences (added before {id} routes to avoid conflicts)
+  - types/index.d.ts: NotificationPreference interface { event, label, in_app, email }
+  - Pages/Notifications/Preferences.tsx: toggle grid (5 events × In-App + Email), inline Toggle component, useForm PUT, recentlySuccessful feedback, ArrowLeft back link
+  - Pages/Notifications/Index.tsx: Cog6ToothIcon gear link to /notifications/preferences in header
+  - Migration applied: all 48 migrations current; Build: 1939 modules, 0 errors
+- [x] P12-05 — Implement browser push notifications (Web Push API + service worker)
+  - Package: minishlink/web-push v10.1.0 installed (+ spomky-labs/pki-framework, web-token/jwt-library, spomky-labs/base64url)
+  - VAPID keys generated via npx web-push (PHP OpenSSL doesn't support EC on Windows); added to .env + .env.example
+  - config/webpush.php: VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY; VITE_VAPID_PUBLIC_KEY exposed to frontend
+  - app/Console/Commands/WebPushGenerateKeys.php: php artisan webpush:vapid (writes keys to .env; falls back to Node.js instructions on non-EC systems)
+  - Migration: push_subscriptions (user_id FK, endpoint text unique, public_key text, auth_token text, content_encoding string default aesgcm)
+  - Model: PushSubscription; User model: pushSubscriptions() HasMany added
+  - Services/WebPushService.php: sends push to all user subscriptions via WebPush::queueNotification + flush; silently deletes expired subscriptions (404/410); fails silently on error
+  - Notifications/Channels/WebPushChannel.php: custom channel; calls toWebPush() on notification + WebPushService::send()
+  - AppServiceProvider: Notification::extend('webpush', WebPushChannel) registered
+  - All 5 notification classes updated: via() adds 'webpush' if pushSubscriptions()->exists(); toWebPush() delegates to toArray()
+  - StorePushSubscriptionRequest + PushSubscriptionController (store: updateOrCreate by endpoint; destroy: delete by endpoint)
+  - Routes: POST /push/subscriptions, DELETE /push/subscriptions
+  - public/sw.js: install/activate (skipWaiting + claim), push event (showNotification with title/body/icon/data), notificationclick (focus existing window or openWindow)
+  - resources/js/hooks/usePushNotifications.ts: states = unsupported|denied|prompt|subscribed|loading; subscribe() registers SW + pushManager.subscribe + router.post; unsubscribe() pushManager.unsubscribe + router.delete
+  - Pages/Notifications/Preferences.tsx: PushSection component added above preferences table — shows state label + Enable/Disable button
+  - Migration applied; Build: 0 errors
 
 ---
 

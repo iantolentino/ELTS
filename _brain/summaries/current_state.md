@@ -5,11 +5,11 @@
 
 ## STATE: EXECUTION_MODE — PHASE 10 IN PROGRESS
 
-**Last updated:** 2026-06-24
-**Last completed:** P12-03 — Wire notifications: ticket assigned, reply received, @mention, SLA warning, SLA breach
-**Current phase:** Phase 12 — Notifications
-**Next task:** P12-04 — Build notification preferences page (user can toggle each event on/off per channel)
-**Pending migrations:** None — all migrations current as of 2026-06-24 (notifications, knowledge_categories, knowledge_articles, csat_surveys, nps_surveys, assets, asset_assignments, ticket_assets all applied)
+**Last updated:** 2026-06-25
+**Last completed:** P12-05 — Implement browser push notifications (Web Push API + service worker)
+**Current phase:** Phase 12 — Notifications (COMPLETE)
+**Next task:** P13-01 — Build API key management page (generate, label, revoke, last-used timestamp)
+**Pending migrations:** None — all 50 migrations current as of 2026-06-25 (notification_preferences + push_subscriptions added)
 
 ---
 

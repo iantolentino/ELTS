@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
@@ -76,5 +77,21 @@ class User extends Authenticatable implements MustVerifyEmail
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    public function prefersNotification(string $event, string $channel = 'in_app'): bool
+    {
+        $pref = $this->notificationPreferences()->where('event', $event)->first();
+        return $pref ? (bool) $pref->$channel : true;
     }
 }

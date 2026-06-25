@@ -44,6 +44,8 @@ use App\Http\Controllers\Admin\ScheduledReportController as AdminScheduledReport
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\RetentionController as AdminRetentionController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationPreferenceController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\CannedResponseSearchController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Users\UserMentionController;
@@ -316,8 +318,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/notifications',                   [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all',         [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::get('/notifications/preferences',       [NotificationPreferenceController::class, 'index'])->name('notifications.preferences');
+    Route::put('/notifications/preferences',       [NotificationPreferenceController::class, 'update'])->name('notifications.preferences.update');
     Route::patch('/notifications/{id}/read',       [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::delete('/notifications/{id}',           [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    Route::post('/push/subscriptions',   [PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::delete('/push/subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
     Route::get('/users/mention-search',        UserMentionController::class)->name('users.mention-search');
     Route::get('/canned-responses/search',     CannedResponseSearchController::class)->name('canned-responses.search');
