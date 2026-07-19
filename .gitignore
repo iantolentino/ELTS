@@ -1,0 +1,12 @@
+# Real credentials — see _brain/security/secrets_policy.md
+config.php
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+
+# Uploaded attachments (not part of source control)
+/uploads/
+
+# Runtime-generated logs (not part of source control)
+/logs/*.log

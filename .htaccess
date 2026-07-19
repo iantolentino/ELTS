@@ -1,0 +1,28 @@
+# MTS v2.0 — Apache config
+# See _brain/deployment/deployment.md for the full deploy checklist this supports.
+
+Options -Indexes
+Options -MultiViews
+
+RewriteEngine On
+
+# /private/ is intentionally reachable (README Step 3 browses to migration-command.php before
+# Step 4 locks anything down) — it is NOT Apache-blocked here. Authorization for scripts inside
+# it is handled at the application layer (see private/migration-command.php's token check).
+# Directory listing is still disabled globally by "Options -Indexes" above.
+
+# Route everything else through the centralized front controller, unless it's a real file/dir
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Deny direct access to raw data/config file types regardless of route
+<FilesMatch "\.(sql|log|sqlite|env)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+    AddOutputFilterByType DEFLATE application/javascript text/javascript
+    AddOutputFilterByType DEFLATE application/json application/xml
+</IfModule>
