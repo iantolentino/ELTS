@@ -6,7 +6,7 @@
 ---
 
 ## Project Name
-Modular Ticketing System (MTS) v2.0 — repo name `ELTS` (github.com/iantolentino/ELTS)
+Modular Ticketing System (MTS) — repo name `ELTS` (github.com/iantolentino/ELTS)
 
 ## Project Type
 Internal enterprise ticketing / helpdesk web app (multi-department, multi-tenant within one org)

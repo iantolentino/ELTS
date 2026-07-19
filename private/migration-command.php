@@ -48,7 +48,7 @@ header('Content-Type: text/html; charset=utf-8');
 <html lang="en">
 <head><meta charset="utf-8"><title>MTS — Migration Check</title></head>
 <body style="font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; line-height: 1.5;">
-<h1>MTS v2.0 — Migration / Connectivity Check</h1>
+<h1>MTS — Migration / Connectivity Check</h1>
 <?php if ($connectionError !== null): ?>
     <p style="color:#b00020; font-weight:bold;">DATABASE CONNECTION FAILED</p>
     <p>Check <code>config.php</code> credentials (DB_HOST, DB_NAME, DB_USER, DB_PASS).</p>

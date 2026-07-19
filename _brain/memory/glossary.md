@@ -7,7 +7,7 @@
 
 | Term | Definition |
 |------|------------|
-| MTS | Modular Ticketing System — this project's product name (v2.0). Repo name is `ELTS`. |
+| MTS | Modular Ticketing System — this project's product name. Repo name is `ELTS`. |
 | Centralized Controller | The single `index.php` front controller that handles every request and routes internally; no per-page entry points. |
 | Department Isolation | Hard rule: an agent's queries are always scoped to their own `department_id`; they cannot read or write another department's tickets. |
 | Burst Limiter | Rate limit allowing up to 10 ticket submissions per requestor email within a 5-minute window before cooldown kicks in. |

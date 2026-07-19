@@ -24,7 +24,7 @@ T040 (ELTS repo wipe + push) is BLOCKED pending a fresh, explicit user confirmat
 it's actually run — not blocking any other task in the meantime.
 
 ## Session Notes
-- MTS v2.0 spec (README.md + database.sql) confirmed 2026-07-19 and written verbatim to project
+- MTS spec (README.md + database.sql) confirmed 2026-07-19 and written verbatim to project
   root; full context in `memory/app_context.md` and `memory/system_architecture.md`.
 - Frontend decision: PHP-rendered views + Tailwind/shadcn-style components, NOT a React/Vite SPA —
   see `decisions/decision_log.md` [STACK] and `decisions/rejected_options.md`.
@@ -107,5 +107,15 @@ it's actually run — not blocking any other task in the meantime.
   contradictory or impossible, suspect this before suspecting the app.
 
 ---
+
+- **Git/remote now exists**: local repo initialized, committed, and force-pushed to
+  `github.com/iantolentino/ELTS.git` (`main`) so work can continue from another device — done
+  early/out of sequence at user request, see T040 in `progress/backlog.md` for the full context
+  (including the prior Laravel app's now-overwritten HEAD SHA, kept on record there).
+  `config.php` (real local creds) and `/uploads/`, `/logs/*.log` (runtime data) are gitignored —
+  a fresh clone needs `config.example.php` copied to `config.php` and filled in before it runs.
+  **Going forward**: commit + push at reasonable checkpoints (e.g., end of each phase) so a
+  session on another device can `git pull` and resume from `_brain/summaries/current_state.md`
+  rather than working from a stale snapshot.
 
 Last updated: 2026-07-19

@@ -30,7 +30,7 @@ Every mutating action (status change, reassignment, note edit) also writes to `a
 
 ## External Integrations
 None at MVP. Email notifications are referenced by the legacy prototype's `notifyEmail()` stub
-pattern but are not yet part of the MTS v2.0 confirmed scope — revisit if/when required.
+pattern but are not yet part of the MTS confirmed scope — revisit if/when required.
 
 ## Scaling Strategy
 - `LIMIT`/`OFFSET` pagination capped at 25 rows per dashboard page

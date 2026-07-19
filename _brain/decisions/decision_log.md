@@ -30,9 +30,9 @@ Impact: high
 Reason: The README's "lightweight PHP backend... cPanel environments" framing conflicts with a literal Vite/React build pipeline on shared hosting; server-rendered PHP delivers the same visual system without a Node runtime dependency. Confirmed with user 2026-07-19. See `decisions/rejected_options.md`.
 Date: 2026-07-19
 
-[SCOPE] → Legacy SQLite prototype (config.php, db.php, dashboard.php, etc.) archived to `_brain/staging/legacy-sqlite-prototype/` and removed from project root; not carried forward into MTS v2.0
+[SCOPE] → Legacy SQLite prototype (config.php, db.php, dashboard.php, etc.) archived to `_brain/staging/legacy-sqlite-prototype/` and removed from project root; not carried forward into MTS
 Impact: medium
-Reason: Prototype's own README.txt states it exists only to test flow/design "before deciding what to carry into ELTS"; MTS v2.0 spec targets MySQL/PDO, not SQLite — clean break avoids mixing schemas
+Reason: Prototype's own README.txt states it exists only to test flow/design "before deciding what to carry into ELTS"; MTS spec targets MySQL/PDO, not SQLite — clean break avoids mixing schemas
 Date: 2026-07-19
 
 [STACK] → Shadcn-style visual system implemented as a small hand-authored static CSS file (`assets/app.css`), not the Tailwind Play CDN and not a Tailwind build step
@@ -75,7 +75,10 @@ Impact: medium
 Reason: `users` has no active/inactive/deleted column in `database.sql`. Deleting the row instead would null out their `tickets.assigned_to` and `audit_logs.actor_id` via the FKs (`ON DELETE SET NULL`), losing real accountability history — worse than keeping the row. The sentinel never matches `password_verify()` (not a valid bcrypt/argon2 hash), so login is fully blocked, while name/email/history stay intact everywhere they're referenced. The `DEACTIVATED:` prefix is also used to render a "deactivated" badge in the admin user list. Reactivating = setting a new real password, which naturally overwrites the sentinel.
 Date: 2026-07-19
 
-[DEPLOY] → Wiping and replacing the contents of github.com/iantolentino/ELTS.git is deferred until MTS v2.0 application code exists and is verified locally (backlog task T040)
+[DEPLOY] → github.com/iantolentino/ELTS.git main was force-pushed with this MTS (PHP-vanilla) build, overwriting a separate, pre-existing Laravel application that lived there (composer.lock, app/Models, database/migrations, tests/, its own _brain/)
+Impact: high
+Reason: User explicitly re-confirmed after being shown the conflict in detail (Laravel app contents listed) — this was NOT the original general backlog approval, a fresh confirmation was obtained specifically for this action per governance/rules.md. Previous Laravel HEAD was `6a3caaa0eb6bac2f7b7cc5b0e11f6c329ea77642` — no longer on any branch, but the commit is not immediately garbage-collected and is recoverable by SHA if ever needed (`git fetch origin 6a3caaa...` won't work post-GC-window; keep this SHA on record regardless).
+Date: 2026-07-19
 Impact: high
 Reason: Clearing a remote repo's history/contents is destructive and hard to reverse; doing it before any code exists would leave the remote empty for no benefit. Confirmed with user 2026-07-19 — requires its own separate confirmation at execution time regardless of backlog order.
 Date: 2026-07-19

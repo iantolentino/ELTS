@@ -6,7 +6,7 @@
 ---
 
 ## In Scope — MVP
-Features confirmed and approved 2026-07-19 (source: user-provided MTS v2.0 README + database.sql):
+Features confirmed and approved 2026-07-19 (source: user-provided MTS README + database.sql):
 
 - [ ] Centralized single-controller routing (`index.php`) with clean URLs
 - [ ] Strict department isolation for agents
@@ -36,7 +36,7 @@ Full atomic breakdown with dependencies: `progress/backlog.md`.
 ## Deferred — Phase 2 (Scale Prep)
 Planned but not built in MVP:
 
-- [ ] Email delivery integration (real SMTP/API) — legacy prototype only stubbed this to a log file; not in the confirmed MTS v2.0 spec, revisit if required
+- [ ] Email delivery integration (real SMTP/API) — legacy prototype only stubbed this to a log file; not in the confirmed MTS spec, revisit if required
 - [ ] Keyset/cursor pagination — only needed if a department's ticket volume grows an order of magnitude beyond current `OFFSET` pagination's comfortable range
 - [ ] Active cache invalidation on write (vs. current TTL-only expiry for `system_cache`)
 - [ ] DB backup cadence / policy — spec is silent on this; logged as research task `R001` rather than assumed (see `progress/backlog.md`)

@@ -1,4 +1,4 @@
-# Modular Ticketing System (MTS) - v2.0
+# Modular Ticketing System (MTS)
 
 ## Executive Summary
 MTS is a high-performance, enterprise-grade ticketing platform built for multi-department organizations. It utilizes a **Centralized Controller** architecture, ensuring that a single engine handles routing and strictly enforces data isolation between departments. Optimized specifically for Cloud and cPanel environments, MTS pairs a lightweight, lightning-fast PHP backend with advanced security, built-in caching, and a modern Shadcn UI front-end interface.

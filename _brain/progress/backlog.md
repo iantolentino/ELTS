@@ -1,7 +1,7 @@
 # BACKLOG
 
 > Tasks are ordered by dependency. Do not execute a task until all dependencies are COMPLETE.
-> Confirmed 2026-07-19 from the MTS v2.0 spec (`README.md` + `database.sql`). One task per AI
+> Confirmed 2026-07-19 from the MTS spec (`README.md` + `database.sql`). One task per AI
 > session — see `tasks/task_rules.md`. Full templates for each task type: `tasks/task_templates.md`.
 
 ---
@@ -94,7 +94,7 @@
 |------|--------------------------------------------------------------------|----------|------------|---------|
 | T038 | Finalize `config.php` deploy instructions + `config.example.php`    | MEDIUM   | T002       | PENDING |
 | T039 | cPanel verification pass via `/private/migration-command.php`        | HIGH     | T005, T035, T036, T037 | PENDING |
-| T040 | **Connect to `github.com/iantolentino/ELTS.git`, wipe remote contents, push MTS v2.0** | HIGH | T039 (all above COMPLETE) | BLOCKED — requires fresh explicit user confirmation at execution time, see `decisions/decision_log.md` [DEPLOY] |
+| T040 | **Connect to `github.com/iantolentino/ELTS.git`, wipe remote contents, push MTS** | HIGH | T039 (all above COMPLETE) | BLOCKED — requires fresh explicit user confirmation at execution time, see `decisions/decision_log.md` [DEPLOY] |
 
 ## Research
 
@@ -741,20 +741,32 @@ Acceptance Criteria:
 Output: Verified deployable build.
 
 ### T040 — Connect to ELTS repo, wipe remote, push
-Priority: HIGH · Phase: MVP · Depends On: T039 (all above COMPLETE) · Status: **BLOCKED**
+Priority: HIGH · Phase: MVP · Depends On: T039 (all above COMPLETE) · Status: **DONE EARLY, OUT OF SEQUENCE**
 Description: Initialize/point this project at `github.com/iantolentino/ELTS.git`, clear its
-existing contents, and push the finished MTS v2.0 build.
+existing contents, and push the finished MTS build.
 Acceptance Criteria:
-- [ ] User has given a fresh, explicit confirmation for this specific action (a prior general
-      approval of the backlog does not count — see `decisions/decision_log.md` [DEPLOY])
-- [ ] Local build has passed T039 verification before this runs
-Output: `github.com/iantolentino/ELTS.git` contents replaced with the verified MTS v2.0 build.
-**Do not execute without re-confirming with the user at that time, per governance/rules.md.**
+- [x] User gave a fresh, explicit confirmation for this specific action — asked twice: once
+      generally, then again after being shown that ELTS already contained a separate, substantial
+      Laravel application (composer.lock, app/Models, database/migrations, tests/, its own
+      _brain/), which this push overwrites. Confirmed "overwrite ELTS with MTS anyway" with
+      that context in hand.
+- [ ] **T039 verification was NOT done first** — executed early, out of the planned dependency
+      order, at the user's explicit request ("commit all files... so I can continue on other
+      device"). T005/T035/T036/T037 (migration check, CSRF, input-validation, session-hardening
+      sweeps) are still PENDING. **What's on GitHub right now is a mid-build snapshot through
+      Phase 5, not a verified deployable release.** Do not treat the push having happened as
+      evidence T039 passed.
+Output: git repo initialized locally (`git init`, branch `main`), committed (104 files), force-
+pushed to `origin main` on `github.com/iantolentino/ELTS.git`, overwriting its previous HEAD.
+**Previous Laravel HEAD SHA (for possible recovery): `6a3caaa0eb6bac2f7b7cc5b0e11f6c329ea77642`** —
+no longer on any branch; not immediately garbage-collected but not guaranteed to survive
+indefinitely either. Record this SHA anywhere durable if the Laravel app might ever be needed back.
+See `decisions/decision_log.md` [DEPLOY] for the full record.
 
 ### R001 — Decide DB backup cadence/policy
 Priority: LOW · Depends On: none · Status: PENDING
 Question: What backup cadence/retention/restore procedure should `db_backup/backup_policy.md`
-document? The MTS v2.0 spec is silent on this.
+document? The MTS spec is silent on this.
 Options:
 - Option A: Rely on host's automated cPanel backups (if available on the target hosting plan)
 - Option B: Scheduled `mysqldump` export via cron + off-site storage

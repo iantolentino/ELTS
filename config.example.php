@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * MTS v2.0 configuration template.
+ * MTS configuration template.
  * Copy to config.php and fill in real values for the target environment.
  * config.php itself must never contain production credentials when committed —
  * see _brain/security/secrets_policy.md.
