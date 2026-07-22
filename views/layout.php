@@ -4,9 +4,12 @@ declare(strict_types=1);
 function renderPage(string $title, string $bodyHtml): void
 {
     $viewAs = getViewAsContext();
+    // T043 — cookie-driven, never prefers-color-scheme; a first-time visitor with no cookie
+    // always gets light mode, only an explicit toggle click changes it.
+    $isDark = ($_COOKIE['mts_theme'] ?? 'light') === 'dark';
     ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?= $isDark ? ' class="dark"' : '' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -57,6 +60,7 @@ function renderConfirmation(string $title, string $message, string $actionUrl, a
         <h1>' . htmlspecialchars($title) . '</h1>
         <p class="muted">' . htmlspecialchars($message) . '</p>
         <form method="post" action="' . htmlspecialchars($actionUrl) . '">
+          ' . csrfField() . '
           ' . $fields . '
           <input type="hidden" name="confirm" value="yes">
           <button class="btn btn-danger" type="submit">Yes, proceed</button>
@@ -70,4 +74,73 @@ function renderConfirmation(string $title, string $message, string $actionUrl, a
 function isConfirmed(): bool
 {
     return ($_POST['confirm'] ?? '') === 'yes';
+}
+
+// Shared left-sidebar shell (T041) for every authenticated area (department agent + admin) —
+// same visual shell, different nav item sets supplied by the caller. $content is placed as-is
+// inside .app-main, so callers keep their own <main class="container"> wrapper unchanged.
+//
+// @param array<int,array{key:string,label:string,href:string,icon:string,badge:?int}> $navItems
+function renderSidebarShell(
+    string $activeKey,
+    array $navItems,
+    string $userName,
+    string $userRoleLabel,
+    string $logoutUrl,
+    string $portalUrl,
+    string $content
+): string {
+    $initials = mb_strtoupper(mb_substr(trim($userName) !== '' ? trim($userName) : '?', 0, 1));
+
+    // T043 — toggles a persistent cookie (handled in index.php before routing) and redirects
+    // back to this exact page, current query string preserved.
+    $isDark = ($_COOKIE['mts_theme'] ?? 'light') === 'dark';
+    $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+    parse_str((string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_QUERY) ?? ''), $currentQuery);
+    $currentQuery['toggle_theme'] = '1';
+    $themeToggleUrl = $currentPath . '?' . http_build_query($currentQuery);
+
+    $navHtml = '';
+    foreach ($navItems as $item) {
+        $isActive = $item['key'] === $activeKey;
+        $badgeHtml = $item['badge'] !== null && $item['badge'] > 0
+            ? '<span class="sidebar-nav-badge">' . (int) $item['badge'] . '</span>'
+            : '';
+        $navHtml .= '<a class="sidebar-nav-item' . ($isActive ? ' active' : '') . '" href="'
+            . htmlspecialchars($item['href']) . '">'
+            . '<span class="sidebar-nav-icon">' . htmlspecialchars($item['icon']) . '</span>'
+            . '<span class="sidebar-nav-label">' . htmlspecialchars($item['label']) . '</span>'
+            . $badgeHtml
+            . '</a>';
+    }
+
+    return '
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="sidebar-logo" href="' . htmlspecialchars($portalUrl) . '">
+          <span class="sidebar-logo-mark">M</span>
+          <span>MTS</span>
+        </a>
+        <nav class="sidebar-nav">' . $navHtml . '</nav>
+        <div class="sidebar-bottom">
+          <a class="sidebar-nav-item" href="' . htmlspecialchars($portalUrl) . '">
+            <span class="sidebar-nav-icon">↗</span>
+            <span class="sidebar-nav-label">Submit request</span>
+          </a>
+          <a class="sidebar-nav-item" href="' . htmlspecialchars($themeToggleUrl) . '">
+            <span class="sidebar-nav-icon">' . ($isDark ? '☀' : '☾') . '</span>
+            <span class="sidebar-nav-label">' . ($isDark ? 'Light mode' : 'Dark mode') . '</span>
+          </a>
+          <div class="sidebar-user">
+            <div class="sidebar-user-avatar">' . htmlspecialchars($initials) . '</div>
+            <div class="sidebar-user-info">
+              <div class="sidebar-user-name">' . htmlspecialchars($userName) . '</div>
+              <div class="sidebar-user-role">' . htmlspecialchars($userRoleLabel) . '</div>
+            </div>
+            <a href="' . htmlspecialchars($logoutUrl) . '">Log out</a>
+          </div>
+        </div>
+      </aside>
+      <div class="app-main">' . $content . '</div>
+    </div>';
 }

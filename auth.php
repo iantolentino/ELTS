@@ -17,6 +17,7 @@ function loginUser(array $user): void
     $_SESSION['role'] = $user['role'];
     $_SESSION['department_id'] = $user['department_id'] !== null ? (int) $user['department_id'] : null;
     $_SESSION['name'] = $user['name'];
+    $_SESSION['last_activity'] = time();
 }
 
 function logoutUser(): void
@@ -34,12 +35,35 @@ function currentUser(): ?array
     if (!isset($_SESSION['user_id'])) {
         return null;
     }
+
+    // Idle timeout (T037) — an authenticated session with no activity for
+    // SESSION_IDLE_TIMEOUT_SECONDS is force-logged-out rather than left open indefinitely.
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > SESSION_IDLE_TIMEOUT_SECONDS) {
+        logoutUser();
+        return null;
+    }
+    $_SESSION['last_activity'] = time();
+
+    // T050 — passive presence: every authenticated request marks the user online and stamps
+    // last_seen_at, no separate heartbeat endpoint or client-side polling. "Online" is then
+    // read back live as "seen in the last N minutes" (see admin_controller.php's user list),
+    // not trusted as a permanent flag — this UPDATE alone can't un-set it when someone leaves.
+    updateUserPresence((int) $_SESSION['user_id']);
+
     return [
         'id' => $_SESSION['user_id'],
         'role' => $_SESSION['role'],
         'department_id' => $_SESSION['department_id'],
         'name' => $_SESSION['name'],
     ];
+}
+
+// NOW(), not PHP's date()/time() — this box's PHP and MySQL clocks are hours apart (see F002),
+// and last_seen_at is later compared against MySQL's own NOW() when computing "online", so both
+// sides of that comparison need to come from the same clock.
+function updateUserPresence(int $userId): void
+{
+    dbQuery('UPDATE users SET is_online = 1, last_seen_at = NOW() WHERE id = :id', ['id' => $userId]);
 }
 
 // Destroys the session and redirects when the request carries ?logout — call before requireLogin.
@@ -55,7 +79,16 @@ function handleLogoutIfRequested(string $redirectUrl): void
 // Returns the current user if already authenticated. Otherwise handles a POST login attempt
 // (redirecting + exiting on success) or renders the login form (returning null) on GET/failure.
 // Callers must treat a null return as "response already sent — stop processing this request."
-function requireLogin(string $formTitle, string $actionUrl): ?array
+//
+// $requiredDepartmentId, when passed (every department-page call site does), rejects an agent's
+// otherwise-valid credentials right here if they belong to a different department — same generic
+// "Invalid email or password" message as a wrong password, not a distinct error, so the login
+// form never confirms an email exists in the wrong department. Without this, credentials were
+// still accepted (a real session got created) on any department's login page and only blocked
+// one step later by requireDepartmentAccess() — correct for data access, but let a session exist
+// at all on a department the agent has no business authenticating against. Superadmin is exempt
+// (already has universal access via requireDepartmentAccess() regardless of login page).
+function requireLogin(string $formTitle, string $actionUrl, ?int $requiredDepartmentId = null): ?array
 {
     $user = currentUser();
     if ($user !== null) {
@@ -65,7 +98,11 @@ function requireLogin(string $formTitle, string $actionUrl): ?array
     $error = null;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $found = attemptLogin((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''));
-        if ($found !== null) {
+        $wrongDepartment = $found !== null
+            && $requiredDepartmentId !== null
+            && $found['role'] === 'agent'
+            && (int) $found['department_id'] !== $requiredDepartmentId;
+        if ($found !== null && !$wrongDepartment) {
             loginUser($found);
             header('Location: ' . $actionUrl);
             exit;
@@ -189,6 +226,7 @@ function renderLoginForm(string $title, string $actionUrl, ?string $error = null
         <h1>' . htmlspecialchars($title) . '</h1>
         ' . $errorHtml . '
         <form method="post" action="' . htmlspecialchars($actionUrl) . '">
+          ' . csrfField() . '
           <div class="field"><label>Email</label><input type="email" name="email" required autofocus></div>
           <div class="field"><label>Password</label><input type="password" name="password" required></div>
           <button class="btn" type="submit">Log in</button>

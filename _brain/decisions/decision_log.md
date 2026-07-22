@@ -75,6 +75,16 @@ Impact: medium
 Reason: `users` has no active/inactive/deleted column in `database.sql`. Deleting the row instead would null out their `tickets.assigned_to` and `audit_logs.actor_id` via the FKs (`ON DELETE SET NULL`), losing real accountability history — worse than keeping the row. The sentinel never matches `password_verify()` (not a valid bcrypt/argon2 hash), so login is fully blocked, while name/email/history stay intact everywhere they're referenced. The `DEACTIVATED:` prefix is also used to render a "deactivated" badge in the admin user list. Reactivating = setting a new real password, which naturally overwrites the sentinel.
 Date: 2026-07-19
 
+[ARCH] → Added `team_leader_name` and `client_name` (both `VARCHAR(150) NOT NULL`) to `tickets`, the first change to `database.sql` since it was locked as spec
+Impact: medium
+Reason: Direct user request — both fields required on the public ticket submission form. Confirmed with the user first (which form, required-vs-optional) since every prior session treated `database.sql` as fixed and routed around it instead of altering it (e.g. resolution summary → `audit_logs`, not a `tickets` column). Live `ticketing_app.tickets` altered with a temporary `DEFAULT ''`, existing rows backfilled to `'Unspecified'`, then the default dropped — final live schema matches `database.sql` exactly (`NOT NULL`, no default). Wired into the public form (both required, standard trim+length validation), `renderTicketDetail()`, and the T032/T033 CSV/print report (`fetchReportTickets()` + both output functions) so the new required data isn't collected and then invisible everywhere else.
+Date: 2026-07-20
+
+[SCOPE] → Opened Phase 10 (Trackr Design & Feature Port, T041–T048), diverging from Phase 9 (Deploy, T038–T040) which was next in line
+Impact: high
+Reason: Direct user request — port the design (sidebar nav, department-picker portal) and re-implement missing functionality (FAQ, request types, comments, requester accounts, tags) from `github.com/iantolentino/ticketing-system.git` ("Trackr"). That repo is Next.js/Prisma/PostgreSQL — a different stack from ELTS's locked PHP/MySQL architecture ([STACK] above — no React/Vite SPA), so this is a re-implementation, not a code merge; cloned read-only to `_brain/staging/` for reference only, not part of the runtime. User was shown a split (design-only vs. design+all features vs. pick specific features) and explicitly chose the full scope. Deploy (T038–T040) resumes after Phase 10, or whenever the user redirects back to it.
+Date: 2026-07-20
+
 [DEPLOY] → github.com/iantolentino/ELTS.git main was force-pushed with this MTS (PHP-vanilla) build, overwriting a separate, pre-existing Laravel application that lived there (composer.lock, app/Models, database/migrations, tests/, its own _brain/)
 Impact: high
 Reason: User explicitly re-confirmed after being shown the conflict in detail (Laravel app contents listed) — this was NOT the original general backlog approval, a fresh confirmation was obtained specifically for this action per governance/rules.md. Previous Laravel HEAD was `6a3caaa0eb6bac2f7b7cc5b0e11f6c329ea77642` — no longer on any branch, but the commit is not immediately garbage-collected and is recoverable by SHA if ever needed (`git fetch origin 6a3caaa...` won't work post-GC-window; keep this SHA on record regardless).
@@ -82,5 +92,15 @@ Date: 2026-07-19
 Impact: high
 Reason: Clearing a remote repo's history/contents is destructive and hard to reverse; doing it before any code exists would leave the remote empty for no benefit. Confirmed with user 2026-07-19 — requires its own separate confirmation at execution time regardless of backlog order.
 Date: 2026-07-19
+
+[SCOPE] → Opened Phase 12 (Dashboard Analytics & Reporting, T055–T065), a large unconfirmed batch request executed under Auto Mode rather than routed through CONFIRMATION_LOCK
+Impact: high
+Reason: Direct, detailed user request (dashboard stat cards, ticket-created/status/priority charts, recent activity, superadmin cross-department dashboard, per-department free filtering, report stat cards, per-department Report tab, department description, superadmin-only agent KPIs) plus an explicit instruction to cross-check `github.com/James-push/ticketing-system.git` for anything missed. That repo turned out to be the same Next.js/Prisma/PostgreSQL codebase already used for Phase 10 ("Trackr" — `iantolentino/ticketing-system` forked from it; confirmed via identical README and a `Sidebar.tsx` comment linking back to it), so its dashboard/stats-API source was read directly for the exact card set, SLA bucket definitions, and chart choices, then reproduced in hand-rolled PHP/CSS/SVG (`analytics.php`) per the existing no-framework-bloat [STACK] decision — not a code port, same rule as Phase 10.
+Date: 2026-07-21
+
+[ARCH] → Added `departments.description TEXT NULL`, the second live change to `database.sql` since it was locked as spec (after `team_leader_name`/`client_name` above)
+Impact: low
+Reason: T064 — direct user request ("when we add new department in requestors view the need to see some description that superadmin can edit"). Nullable with no default, so every existing department silently falls back to the prior generic portal-picker text until a superadmin fills one in — no backfill needed, unlike the `NOT NULL` team_leader_name/client_name addition.
+Date: 2026-07-21
 
 ---

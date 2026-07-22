@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String      @id @default(cuid())
+  name           String?
+  email          String      @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String?
+  role           Role        @default(MEMBER)
+  departmentId   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  status         UserStatus  @default(PENDING)
+  accounts       Account[]
+  comments       Comment[]
+  sessions       Session[]
+  tickets        Ticket[]    @relation("AssignedTickets")
+  createdTickets Ticket[]    @relation("CreatedTickets")
+  department     Department? @relation(fields: [departmentId], references: [id])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Department {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  description  String?
+  color        String        @default("#7c5cfc")
+  createdAt    DateTime      @default(now())
+  faqItems     FaqItem[]
+  requestTypes RequestType[]
+  tickets      Ticket[]
+  users        User[]
+}
+
+model RequestType {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  icon         String     @default("🎫")
+  order        Int        @default(0)
+  departmentId String
+  createdAt    DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  fields       RequestTypeField[]
+  tickets      Ticket[]
+
+  @@index([departmentId])
+}
+
+model RequestTypeField {
+  id            String           @id @default(cuid())
+  requestTypeId String
+  label         String
+  key           String
+  type          RequestFieldType @default(TEXT)
+  required      Boolean          @default(false)
+  placeholder   String?
+  helpText      String?
+  options       String[]         @default([])
+  order         Int              @default(0)
+  createdAt     DateTime         @default(now())
+  requestType   RequestType      @relation(fields: [requestTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([requestTypeId, key])
+  @@index([requestTypeId])
+}
+
+model FaqItem {
+  id           String     @id @default(cuid())
+  question     String
+  answer       String
+  order        Int        @default(0)
+  departmentId String
+  createdAt    DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Ticket {
+  id           String       @id @default(cuid())
+  ticketNumber String       @unique
+  title        String
+  description  String?
+  status       TicketStatus @default(OPEN)
+  priority     Priority     @default(MEDIUM)
+  tags         String[]
+  slaDeadline  DateTime?
+  slaBreached  Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  departmentId String?
+  assigneeId   String?
+  creatorId    String
+  requestTypeId String?
+  customFields  Json?
+  comments     Comment[]
+  assignee     User?        @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  creator      User         @relation("CreatedTickets", fields: [creatorId], references: [id])
+  department   Department?  @relation(fields: [departmentId], references: [id])
+  requestType   RequestType? @relation(fields: [requestTypeId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([priority])
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@index([slaDeadline])
+  @@index([requestTypeId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticketId  String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  MEMBER
+  REQUESTER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum RequestFieldType {
+  TEXT
+  TEXTAREA
+  SELECT
+  NUMBER
+  DATE
+  BOOLEAN
+}
